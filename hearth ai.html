@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HEARTH — humanity corpus debater</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  html,body{height:100%}
+  body{background:#050507;color:#e4e4e7;-webkit-font-smoothing:antialiased; overscroll-behavior:none;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(900px 500px at 50% -15%, rgba(56,189,248,.09), transparent 60%),radial-gradient(700px 400px at 85% 10%, rgba(168,85,247,.07), transparent 60%),radial-gradient(600px 400px at 15% 20%, rgba(236,72,153,.05), transparent 60%);pointer-events:none;z-index:0}
+  .serif{font-family:'Instrument Serif', Georgia, serif}
+  .mono{font-family:'Fragment Mono', ui-monospace, monospace}
+  .egg{font-family:'Fragment Mono', ui-monospace, monospace; letter-spacing:-.08em}
+  .city{transition:opacity .8s ease, filter .8s ease}
+  body.idle .city{opacity:.22; filter:saturate(0) brightness(.7)}
+  body.awake .city{opacity:1; filter:saturate(1) brightness(1)}
+  .seat{opacity:.38; transition:all .5s cubic-bezier(.2,.8,.2,1); filter:grayscale(.4)}
+  body.awake .seat{opacity:.68}
+  .seat.speaking{opacity:1!important; transform:translateY(-2px) scale(1.13); filter:grayscale(0) drop-shadow(0 0 12px currentColor)}
+  .seat.speaking .egg{animation:throb 1.1s ease-in-out infinite}
+  @keyframes throb{0%,100%{opacity:1}50%{opacity:.65}}
+  @keyframes travel{0%{left:10%}40%{left:90%}60%{left:90%}100%{left:10%}}
+  #pulse{opacity:0; transition:opacity .6s}
+  body.awake #pulse{opacity:1; animation:travel 3.4s ease-in-out infinite}
+  body.settled .city{opacity:.45}
+  #debateLog::-webkit-scrollbar,#whyLogs::-webkit-scrollbar{width:6px}
+  #debateLog::-webkit-scrollbar-thumb,#whyLogs::-webkit-scrollbar-thumb{background:#27272a;border-radius:3px}
+  .glass{background:linear-gradient(180deg, rgba(24,24,27,.7), rgba(9,9,11,.6)); backdrop-filter: blur(12px)}
+</style>
+</head>
+<body class="idle selection:bg-cyan-300/20 selection:text-cyan-100">
+<div class="relative z-10 min-h-screen flex flex-col">
+  <header class="pt-10 pb-4 text-center">
+    <h1 class="serif text-5xl md:text-7xl tracking-tight">HEARTH</h1>
+    <p id="subtitle" class="mt-3 text-[12px] uppercase tracking-[0.32em] text-zinc-500">Waiting for input…</p>
+  </header>
+
+  <!-- CITIES -->
+  <div id="citiesWrap" class="max-w-6xl mx-auto px-4 w-full mb-6 md:mb-10">
+    <div class="flex items-start justify-center gap-4 md:gap-10">
+      <div id="city1" class="flex-1 max-w-[520px]"></div>
+      <div class="hidden md:block relative w-32 lg:w-48 h-24 shrink-0">
+        <div class="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-zinc-700/80 to-transparent"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-zinc-800/70"></div>
+        <div id="pulse" class="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.8)]"></div>
+        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-widest text-zinc-600">corpus link</div>
+      </div>
+      <div id="city2" class="flex-1 max-w-[520px]"></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="flex-1 w-full max-w-[1450px] mx-auto px-4 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    
+    <!-- LEFT: ASK -->
+    <section class="lg:col-span-3 lg:sticky lg:top-6">
+      <div class="glass rounded-[28px] border border-zinc-800 p-5 md:p-6">
+        <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-4">Ask</h2>
+        
+        <label class="block text-[11px] uppercase tracking-wider text-zinc-600 mb-1.5">Question</label>
+        <textarea id="question" rows="2" placeholder="What do you want humanity to answer?" class="w-full resize-none bg-black/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none rounded-2xl px-4 py-3 text-[15px] leading-snug placeholder:text-zinc-600"></textarea>
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] uppercase tracking-wider text-zinc-600 mb-1.5">Starting seat</label>
+            <select id="seatSelect" class="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-zinc-600">
+              <option value="any">Any seat — full quorum</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] uppercase tracking-wider text-zinc-600 mb-1.5">Mode</label>
+            <select id="modeSelect" class="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none">
+              <option>Balanced</option>
+              <option>Hold (H1 bias)</option>
+              <option>Shift (H2 bias)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-[11px] uppercase tracking-wider text-zinc-600">Context / Riff</label>
+            <span class="text-[10px] text-zinc-600">feeds both cities</span>
+          </div>
+          <textarea id="context" rows="9" placeholder="Add context, background, or riff here... this feeds both cities" class="w-full bg-black/40 border border-zinc-800 focus:border-zinc-700 focus:outline-none rounded-2xl px-4 py-3 text-[14px] leading-relaxed placeholder:text-zinc-700"></textarea>
+        </div>
+
+        <button id="wakeBtn" disabled class="mt-5 w-full py-3.5 rounded-2xl bg-white text-black font-medium tracking-wide hover:bg-zinc-200 active:bg-zinc-300 transition disabled:opacity-30 disabled:cursor-not-allowed">
+          WAKE
+        </button>
+        <p class="mt-3 text-[11px] leading-snug text-zinc-600 text-center">Starts blank. Nothing runs until you wake the hearth.</p>
+      </div>
+    </section>
+
+    <!-- CENTER: DEBATE -->
+    <section class="lg:col-span-6">
+      <div class="glass rounded-[28px] border border-zinc-800 h-[76vh] min-h-[520px] flex flex-col overflow-hidden">
+        <div class="px-5 md:px-7 py-4 border-b border-zinc-800/80 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-3">
+            <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Debate</h2>
+            <div class="w-px h-4 bg-zinc-800"></div>
+            <div id="debateStatus" class="text-[11px] text-zinc-600">Idle</div>
+          </div>
+          <div class="flex items-center gap-2 text-[10px] text-zinc-600">
+            <span class="w-1.5 h-1.5 rounded-full bg-zinc-700" id="liveDot"></span>
+            <span>LIVE</span>
+          </div>
+        </div>
+        <div id="debateLog" class="flex-1 overflow-y-auto px-5 md:px-7 py-6">
+          <div class="h-full flex flex-col items-center justify-center text-center">
+            <div class="mono text-[15px] text-zinc-700 mb-2">))<span class="inline-block w-1.5 h-1.5 rounded-full bg-zinc-700 mx-[2px]"></span>((</div>
+            <p class="text-zinc-600 text-sm">Cities are dark. Ask a question to begin.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: ANSWER -->
+    <section class="lg:col-span-3 lg:sticky lg:top-6">
+      <div class="glass rounded-[28px] border border-zinc-800 p-5 md:p-6 h-[76vh] min-h-[520px] flex flex-col">
+        <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-3">Answer</h2>
+        
+        <div id="finalAnswer" class="grow">
+          <div class="h-full flex items-center justify-center text-zinc-700 text-sm text-center px-4">Awaiting quorum…</div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-zinc-800/80">
+          <h3 class="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Why logs</h3>
+          <div id="whyLogs" class="space-y-1.5 max-h-[22vh] overflow-y-auto pr-1 text-[12px] leading-snug text-zinc-500">
+            <div class="text-zinc-700">—</div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-zinc-800/80">
+          <div id="fusionScore" class="grid grid-cols-3 gap-2"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const HEARTHS = [{id:'H1',name:'HEARTH-1',bias:'hold'},{id:'H2',name:'HEARTH-2',bias:'shift'}];
+  const DISTRICTS = [
+    {id:'origin',  name:'ORIGIN',  role:'Memory & ancestry', color:'#f59e0b'},
+    {id:'healer',  name:'HEALER',  role:'Care & healing',    color:'#10b981'},
+    {id:'builder', name:'BUILDER', role:'Making & systems',  color:'#6366f1'},
+    {id:'weaver',  name:'WEAVER',  role:'Culture & trust',   color:'#ec4899'},
+    {id:'seeker',  name:'SEEKER',  role:'Truth & inquiry',   color:'#06b6d4'},
+    {id:'keeper',  name:'KEEPER',  role:'Preservation',      color:'#eab308'},
+    {id:'warden',  name:'WARDEN',  role:'Risk & protection', color:'#ef4444'},
+    {id:'dreamer', name:'DREAMER', role:'Imagination',       color:'#8b5cf6'},
+  ];
+
+  const subtitle = document.getElementById('subtitle');
+  const city1 = document.getElementById('city1');
+  const city2 = document.getElementById('city2');
+  const questionEl = document.getElementById('question');
+  const contextEl = document.getElementById('context');
+  const seatSelect = document.getElementById('seatSelect');
+  const modeSelect = document.getElementById('modeSelect');
+  const wakeBtn = document.getElementById('wakeBtn');
+  const debateLog = document.getElementById('debateLog');
+  const debateStatus = document.getElementById('debateStatus');
+  const finalAnswer = document.getElementById('finalAnswer');
+  const whyLogs = document.getElementById('whyLogs');
+  const fusionScore = document.getElementById('fusionScore');
+  const liveDot = document.getElementById('liveDot');
+
+  let running = false;
+  let timeouts = [];
+  let speeches = [];
+
+  // build seats visual
+  function mountCities(){
+    [city1,city2].forEach((root,idx)=>{
+      const h = HEARTHS[idx];
+      root.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'city';
+      wrap.dataset.hearth = h.id;
+      wrap.innerHTML = `<div class="text-[10px] uppercase tracking-[0.22em] text-zinc-500 mb-3 text-center">${h.name}</div><div class="grid grid-cols-8 gap-x-1.5 gap-y-2.5"></div>`;
+      const grid = wrap.querySelector('.grid');
+      DISTRICTS.forEach(d=>{
+        ['M','F'].forEach(g=>{
+          const seat = document.createElement('div');
+          seat.className = 'seat';
+          seat.dataset.hearth = h.id;
+          seat.dataset.district = d.id;
+          seat.dataset.gender = g;
+          seat.style.color = d.color;
+          seat.title = `${d.name} ${g} • ${d.role}`;
+          seat.innerHTML = `<div class="egg text-[14px] md:text-[16px] leading-none">))<span class="inline-block w-[5px] h-[5px] md:w-[6px] md:h-[6px] rounded-full bg-current mx-[1px] -translate-y-[1px]"></span>((</div><div class="text-[9px] mt-1 font-medium tracking-wide" style="color:${d.color}aa">${d.name[0]}${g}</div>`;
+          grid.appendChild(seat);
+        });
+      });
+      root.appendChild(wrap);
+    });
+  }
+  mountCities();
+
+  // populate seat select
+  DISTRICTS.forEach(d=>{
+    ['M','F'].forEach(g=>{
+      const opt = document.createElement('option');
+      opt.value = `${d.id}-${g}`;
+      opt.textContent = `${d.name} ${g}`;
+      seatSelect.appendChild(opt);
+    });
+  });
+
+  // load saved
+  try{
+    const saved = JSON.parse(localStorage.getItem('hearth_humanity')||'null');
+    if(saved){
+      questionEl.value = saved.question||'';
+      contextEl.value = saved.context||'';
+      seatSelect.value = saved.seat||'any';
+      modeSelect.value = saved.mode||'Balanced';
+    }
+  }catch{}
+
+  questionEl.addEventListener('input', ()=> {
+    wakeBtn.disabled = questionEl.value.trim().length < 3 || running;
+  });
+
+  function clearTimers(){ timeouts.forEach(t=>clearTimeout(t)); timeouts=[]; }
+  
+  function buildSeats(){
+    const all = [];
+    HEARTHS.forEach(h=>{
+      DISTRICTS.forEach(d=>{
+        ['M','F'].forEach(g=>{
+          all.push({...h, district:d.id, districtName:d.name, gender:g, role:d.role, color:d.color});
+        });
+      });
+    });
+    // order: interleave H1/H2 by district
+    const ordered = [];
+    DISTRICTS.forEach(d=>{
+      ['M','F'].forEach(g=>{
+        ordered.push(all.find(s=>s.id==='H1' && s.district===d.id && s.gender===g));
+        ordered.push(all.find(s=>s.id==='H2' && s.district===d.id && s.gender===g));
+      });
+    });
+    // starting seat
+    if(seatSelect.value!=='any'){
+      const [sd,sg] = seatSelect.value.split('-');
+      const idx = ordered.findIndex(s=>s.district===sd && s.gender===sg);
+      if(idx>0){ const [first]=ordered.splice(idx,1); ordered.unshift(first); }
+    }
+    // mode bias
+    if(modeSelect.value.includes('H1')) ordered.sort((a,b)=> a.id==='H1'?-1:1);
+    if(modeSelect.value.includes('H2')) ordered.sort((a,b)=> a.id==='H2'?-1:1);
+    return ordered;
+  }
+
+  function highlightSeat(s){
+    document.querySelectorAll('.seat.speaking').forEach(el=>el.classList.remove('speaking'));
+    const el = document.querySelector(`.seat[data-hearth="${s.id}"][data-district="${s.district}"][data-gender="${s.gender}"]`);
+    if(el) el.classList.add('speaking');
+  }
+
+  function generateSpeech(s, q, ctx, turn){
+    const topic = q.replace(/[?!.]/g,'').trim();
+    const c = (ctx||'').slice(0,140);
+    const hold = s.id==='H1';
+    const bank = {
+      origin: hold? `We remember ${topic}. The old agreements survived because they honored limits. ${c?`Your note — "${c}" — fits that lineage.`:''}` : `Memory is a starting point, not a cage. Around ${topic}, we can carry the principle without the form.`,
+      healer: `Who is harmed first? With ${topic}, care means measuring pain before prestige. ${c?`Context: ${c}.`:''} Reduce harm, then scale.`,
+      builder: `Make ${topic} modular. Interfaces clear, parts replaceable. ${hold?'Keep the core stable.':'Allow hot-swaps.'} ${c?`Using "${c}" as requirement.`:''}`,
+      weaver: `This lives in relationships, not specs. ${topic} needs consent loops and stories people can repeat.`,
+      seeker: `What do we actually know about ${topic}? Define falsifiable claims. ${c?`Treat "${c}" as hypothesis, not fact.`:''}`,
+      keeper: hold? `Preserve the commons in ${topic}. Codify stewardship, slow the extractors.` : `Preserve by evolving: living precedent over frozen law for ${topic}.`,
+      warden: `Risks: misuse, lock-in, exclusion. For ${topic}, design audits and exits first.`,
+      dreamer: `Ten years out, ${topic} could feel ordinary. Prototype the weird version quietly. ${c?`Riffing on "${c}".`:''}`
+    };
+    let base = bank[s.district] || `${topic} — respond with care.`;
+    if(turn%5===4) base += hold ? ' Hold the line.' : ' Push the boundary.';
+    return base;
+  }
+
+  function generateWhy(s,q,ctx){
+    return `${s.districtName} ${s.gender} — ${s.role.toLowerCase()}. Speaking because ${q.slice(0,48)}${q.length>48?'…':''} ${ctx?`needs ${ctx.slice(0,36)}${ctx.length>36?'…':''} in frame.`:'needs grounded framing.'}`;
+  }
+
+  function addDebateMessage(s, text, turn){
+    const item = document.createElement('div');
+    item.className = 'group';
+    item.innerHTML = `
+      <div class="flex items-baseline gap-2 flex-wrap">
+        <span class="text-[10px] px-2 py-0.5 rounded-md border" style="border-color:${s.color}33;background:${s.color}14;color:${s.color}">${s.name} • ${s.districtName} ${s.gender}</span>
+        <span class="text-[11px] text-zinc-500">${s.role}</span>
+        <span class="text-[10px] text-zinc-600">turn ${turn+1}</span>
+      </div>
+      <p class="mt-2 text-[15px] md:text-[16px] leading-[1.55] text-zinc-200">${text}</p>
+    `;
+    debateLog.appendChild(item);
+    debateLog.scrollTop = debateLog.scrollHeight;
+  }
+
+  function addWhy(text){
+    const row = document.createElement('div');
+    row.className = 'truncate';
+    row.textContent = '• ' + text;
+    whyLogs.prepend(row);
+    while(whyLogs.children.length>40) whyLogs.removeChild(whyLogs.lastChild);
+  }
+
+  function updateRunning(turn,total){
+    finalAnswer.innerHTML = `
+      <div class="h-full flex flex-col justify-center">
+        <div class="text-[11px] uppercase tracking-widest text-zinc-500 mb-2">Synthesizing</div>
+        <div class="serif text-[28px] leading-none text-zinc-200">${turn}/${total} <span class="text-zinc-500 text-[18px]">voices</span></div>
+        <div class="mt-4 h-[2px] w-full bg-zinc-800 overflow-hidden rounded">
+          <div class="h-full bg-gradient-to-r from-cyan-400 to-violet-400 transition-all" style="width:${Math.round(turn/total*100)}%"></div>
+        </div>
+        <p class="mt-4 text-[13px] text-zinc-500 leading-snug">Listening across districts. No output until quorum.</p>
+      </div>
+    `;
+  }
+
+  function finish(q,ctx){
+    running = false;
+    wakeBtn.disabled = false;
+    wakeBtn.textContent = 'ASK AGAIN';
+    document.body.classList.remove('awake');
+    document.body.classList.add('settled');
+    document.querySelectorAll('.seat.speaking').forEach(el=>el.classList.remove('speaking'));
+    debateStatus.textContent = 'Quorum reached';
+    subtitle.textContent = 'Answer synthesized';
+    liveDot.classList.remove('bg-emerald-400');
+    liveDot.classList.add('bg-zinc-700');
+
+    const headline = `Stewarded path for “${q.replace(/[?!.]+$/,'')}”.`;
+    const body = `With context${ctx?' — “'+ctx.slice(0,120)+(ctx.length>120?'…':'')+'”':''}, HEARTH-1 (hold) and HEARTH-2 (shift) converge:\n\n• Preserve agency, memory, and consent.\n• Build modular, reversible systems; test at human scale.\n• Verify claims; protect edge cases by design.\n• Let culture lead adoption; keep law as backstop.\n\nNext step: run a small, audited pilot. Measure harm reduction, truth retention, and voluntary uptake. Both cities observe.`;
+
+    finalAnswer.innerHTML = `
+      <div class="serif text-[26px] md:text-[30px] leading-[1.15] text-zinc-100">${headline}</div>
+      <p class="mt-4 text-[14px] leading-relaxed text-zinc-300 whitespace-pre-wrap">${body}</p>
+    `;
+
+    const coh = 82 + (q.length % 13);
+    const emp = 80 + (ctx.length % 15);
+    const fea = 84 + ((q.length+ctx.length) % 11);
+    const fus = Math.round((coh+emp+fea)/3);
+    fusionScore.innerHTML = `
+      <div class="p-2.5 rounded-xl bg-zinc-950/70 border border-zinc-800 text-center"><div class="text-[10px] uppercase tracking-wider text-zinc-500">Coherence</div><div class="text-[18px] text-zinc-200">${coh}%</div></div>
+      <div class="p-2.5 rounded-xl bg-zinc-950/70 border border-zinc-800 text-center"><div class="text-[10px] uppercase tracking-wider text-zinc-500">Empathy</div><div class="text-[18px] text-zinc-200">${emp}%</div></div>
+      <div class="p-2.5 rounded-xl bg-zinc-950/70 border border-zinc-800 text-center"><div class="text-[10px] uppercase tracking-wider text-zinc-500">Feasibility</div><div class="text-[18px] text-zinc-200">${fea}%</div></div>
+      <div class="col-span-3 mt-1 flex items-center justify-between pt-2 border-t border-zinc-800/80"><span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Fusion</span><span class="serif text-[20px]">${fus}% convergence</span></div>
+    `;
+  }
+
+  function start(){
+    const q = questionEl.value.trim();
+    const ctx = contextEl.value.trim();
+    if(q.length<3) return;
+
+    localStorage.setItem('hearth_humanity', JSON.stringify({question:q, context:ctx, seat:seatSelect.value, mode:modeSelect.value, ts:Date.now()}));
+
+    clearTimers();
+    running = true;
+    speeches = [];
+    wakeBtn.disabled = true;
+    wakeBtn.textContent = 'LISTENING…';
+    debateLog.innerHTML = '';
+    whyLogs.innerHTML = '';
+    fusionScore.innerHTML = '';
+    finalAnswer.innerHTML = `<div class="h-full flex items-center justify-center text-zinc-600 text-sm">Waking cities…</div>`;
+    debateStatus.textContent = 'Quorum forming';
+    subtitle.textContent = 'Cities waking…';
+    liveDot.classList.remove('bg-zinc-700');
+    liveDot.classList.add('bg-emerald-400','animate-pulse');
+    document.body.classList.remove('idle','settled');
+    document.body.classList.add('awake');
+
+    const seats = buildSeats();
+    const total = seats.length; // 32
+
+    let turn = 0;
+    function step(){
+      if(!running) return;
+      if(turn >= total){ finish(q,ctx); return; }
+      const s = seats[turn];
+      highlightSeat(s);
+      const speech = generateSpeech(s,q,ctx,turn);
+      speeches.push(speech);
+      addDebateMessage(s,speech,turn);
+      addWhy(generateWhy(s,q,ctx));
+      updateRunning(turn+1,total);
+      debateStatus.textContent = `Turn ${turn+1}/${total} — ${s.name}`;
+      turn++;
+      const delay = 520 + Math.random()*260;
+      timeouts.push(setTimeout(step, delay));
+    }
+    timeouts.push(setTimeout(step, 650));
+  }
+
+  wakeBtn.addEventListener('click', ()=>{
+    if(running){ // reset
+      clearTimers();
+      running=false;
+      document.body.classList.remove('awake');
+      document.body.classList.add('idle');
+      wakeBtn.textContent='WAKE';
+      wakeBtn.disabled = questionEl.value.trim().length<3;
+      subtitle.textContent='Waiting for input…';
+      debateStatus.textContent='Idle';
+      debateLog.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-center"><div class="mono text-[15px] text-zinc-700 mb-2">))<span class="inline-block w-1.5 h-1.5 rounded-full bg-zinc-700 mx-[2px]"></span>((</div><p class="text-zinc-600 text-sm">Cities are dark. Ask a question to begin.</p></div>`;
+      finalAnswer.innerHTML = `<div class="h-full flex items-center justify-center text-zinc-700 text-sm text-center px-4">Awaiting quorum…</div>`;
+      whyLogs.innerHTML = '<div class="text-zinc-700">—</div>';
+      fusionScore.innerHTML='';
+      liveDot.classList.remove('bg-emerald-400','animate-pulse');
+      liveDot.classList.add('bg-zinc-700');
+      document.querySelectorAll('.seat.speaking').forEach(el=>el.classList.remove('speaking'));
+      return;
+    }
+    start();
+  });
+
+  // initial button state
+  wakeBtn.disabled = questionEl.value.trim().length < 3;
+});
+</script>
+</body>
+</html>

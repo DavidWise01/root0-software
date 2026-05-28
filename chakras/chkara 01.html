@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAKRA HOLOGRAM · TETHER · CREATE</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#010108;
+    color:#9db9e8;
+    font-family:'Courier New', Courier, monospace;
+    overflow:hidden;
+    height:100vh;
+  }
+  header {
+    height:56px;
+    background:#040820;
+    border-bottom:1px solid #2a5cbb;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 20px;
+    box-shadow:0 0 25px rgba(42,92,187,0.25), inset 0 -1px 0 rgba(74,140,238,0.2);
+    position:relative;
+    z-index:10;
+  }
+  header h1 {
+    font-size:16px;
+    letter-spacing:3px;
+    font-weight:600;
+    color:#4a8cee;
+    text-shadow:0 0 12px rgba(42,92,187,0.8), 0 0 2px #fff;
+    white-space:nowrap;
+  }
+  .tether {
+    display:flex;
+    gap:24px;
+    font-size:11px;
+    letter-spacing:1.5px;
+  }
+  .tether-item { display:flex; align-items:center; gap:7px; opacity:0.9; }
+  .dot {
+    width:9px; height:9px; border-radius:50%;
+    box-shadow:0 0 10px currentColor, 0 0 4px currentColor;
+    animation:pulse 3s infinite;
+  }
+  .dot.gold { background:#d4a84c; color:#d4a84c; }
+  .dot.purple { background:#c088ff; color:#c088ff; }
+  .dot.green { background:#5aaa8b; color:#5aaa8b; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.15);opacity:0.7} }
+
+  main {
+    display:flex;
+    height:calc(100vh - 56px);
+  }
+  .sidebar {
+    width:250px;
+    background:linear-gradient(180deg, #040820 0%, #020310 100%);
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    border-right:1px solid #132146;
+    position:relative;
+  }
+  .sidebar.right {
+    border-left:1px solid #132146;
+    border-right:none;
+    width:260px;
+  }
+  .panel-title {
+    font-size:11px;
+    letter-spacing:2px;
+    color:#4a8cee;
+    margin-bottom:4px;
+    text-transform:uppercase;
+    opacity:0.8;
+  }
+  .chakra-list { display:flex; flex-direction:column; gap:8px; }
+  .chakra-btn {
+    background:#020412;
+    border:1px solid #1a2f5f;
+    border-left-width:4px;
+    padding:10px 12px;
+    text-align:left;
+    color:#b8cfff;
+    font-family:monospace;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.2s;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:relative;
+    overflow:hidden;
+  }
+  .chakra-btn:hover {
+    background:#081230;
+    transform:translateX(2px);
+    box-shadow:0 0 15px rgba(42,92,187,0.3);
+  }
+  .chakra-btn.active {
+    background:#0a1738;
+    box-shadow:0 0 20px currentColor, inset 0 0 10px rgba(0,0,0,0.5);
+    color:#fff;
+  }
+  .chakra-btn .left { display:flex; align-items:center; gap:10px; }
+  .swatch { width:14px; height:14px; border-radius:3px; box-shadow:0 0 8px currentColor; }
+  
+  .center {
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    background:
+      radial-gradient(ellipse at center, #071028 0%, #010108 70%),
+      repeating-linear-gradient(0deg, rgba(42,92,187,0.04) 0 1px, transparent 1px 32px),
+      repeating-linear-gradient(90deg, rgba(42,92,187,0.04) 0 1px, transparent 1px 32px);
+  }
+  .holo-wrap {
+    position:relative;
+    padding:12px;
+    background:linear-gradient(180deg, #040820, #010208);
+    border:1px solid #2a5cbb;
+    box-shadow:0 0 40px rgba(42,92,187,0.35), inset 0 0 30px rgba(0,0,0,0.9);
+  }
+  canvas {
+    display:block;
+    width:800px;
+    height:600px;
+    max-width:min(82vw, calc((100vh - 140px) * 1.333));
+    max-height:min(70vh, 82vw * 0.75);
+    background:#000;
+    cursor:crosshair;
+    image-rendering: crisp-edges;
+  }
+  .holo-label {
+    position:absolute;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:10px;
+    letter-spacing:2px;
+    color:#2a5cbb;
+    background:rgba(1,1,8,0.8);
+    padding:4px 10px;
+    border:1px solid #1a2f5f;
+    pointer-events:none;
+  }
+
+  .control-btn {
+    width:100%;
+    padding:11px;
+    background:#020513;
+    border:1px solid #2a5cbb;
+    color:#6b94da;
+    font-family:monospace;
+    font-size:12px;
+    letter-spacing:1.5px;
+    cursor:pointer;
+    transition:all 0.18s;
+    text-transform:uppercase;
+    position:relative;
+    overflow:hidden;
+  }
+  .control-btn:hover {
+    background:#081739;
+    color:#cfe2ff;
+    box-shadow:0 0 18px rgba(74,140,238,0.45), inset 0 0 12px rgba(42,92,187,0.2);
+    border-color:#4a8cee;
+  }
+  .control-btn.active {
+    background:#0d1f4a;
+    color:#d4a84c;
+    border-color:#d4a84c;
+    box-shadow:0 0 22px rgba(212,168,76,0.5);
+    text-shadow:0 0 8px rgba(212,168,76,0.8);
+  }
+  .control-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  .slider-group { margin:14px 0; }
+  .slider-group label {
+    display:flex;
+    justify-content:space-between;
+    font-size:10px;
+    color:#5a7bb8;
+    margin-bottom:6px;
+    letter-spacing:1px;
+  }
+  .slider-group label span { color:#4a8cee; }
+  input[type=range] {
+    -webkit-appearance:none;
+    width:100%;
+    height:4px;
+    background:#0a142e;
+    border:1px solid #1a2f5f;
+    border-radius:2px;
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none;
+    width:14px; height:14px;
+    background:#4a8cee;
+    border-radius:50%;
+    cursor:pointer;
+    box-shadow:0 0 10px #2a5cbb;
+    border:1px solid #cfe2ff;
+  }
+  input[type=range]::-moz-range-thumb {
+    width:14px; height:14px;
+    background:#4a8cee;
+    border-radius:50%;
+    cursor:pointer;
+    border:1px solid #cfe2ff;
+    box-shadow:0 0 10px #2a5cbb;
+  }
+
+  .toggle-row {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 10px;
+    background:#020612;
+    border:1px solid #14234a;
+    margin:6px 0;
+    font-size:11px;
+    letter-spacing:1px;
+  }
+  .toggle-row input { accent-color:#4a8cee; width:16px; height:16px; cursor:pointer; }
+
+  .status {
+    background:#000208;
+    border:1px solid #132146;
+    padding:10px;
+    font-size:10.5px;
+    line-height:1.6;
+    color:#5aaa8b;
+    min-height:72px;
+    font-family:monospace;
+    box-shadow:inset 0 0 15px rgba(0,0,0,0.8);
+    white-space:pre-line;
+  }
+  .status b { color:#4a8cee; font-weight:normal; }
+
+  .formula {
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px solid #132146;
+    font-size:10px;
+    color:#3a5a9a;
+    text-align:center;
+    letter-spacing:1px;
+  }
+
+  @media (max-width:1100px){
+    main { flex-direction:column; }
+    .sidebar, .sidebar.right { width:100%; border:none; border-bottom:1px solid #132146; flex-direction:row; flex-wrap:wrap; gap:10px; }
+    .chakra-list { flex-direction:row; flex-wrap:wrap; }
+    .chakra-btn { flex:1 0 110px; }
+    .panel-title { width:100%; }
+    .center { order:-1; padding:10px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>CHAKRA HOLOGRAM · TETHER · CREATE</h1>
+  <div class="tether">
+    <div class="tether-item"><span class="dot gold"></span>DAVID</div>
+    <div class="tether-item"><span class="dot purple"></span>SARAH</div>
+    <div class="tether-item"><span class="dot green"></span>ROTH</div>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar left">
+    <div class="panel-title">Chakra Palette</div>
+    <div class="chakra-list" id="chakras">
+      <button class="chakra-btn" data-color="#dd3333" style="color:#dd3333;border-left-color:#dd3333"><div class="left"><span class="swatch" style="background:#dd3333"></span>ROOT</div>λ₁</button>
+      <button class="chakra-btn" data-color="#ee7722" style="color:#ee7722;border-left-color:#ee7722"><div class="left"><span class="swatch" style="background:#ee7722"></span>SACRAL</div>λ₂</button>
+      <button class="chakra-btn" data-color="#ddbb22" style="color:#ddbb22;border-left-color:#ddbb22"><div class="left"><span class="swatch" style="background:#ddbb22"></span>SOLAR</div>λ₃</button>
+      <button class="chakra-btn active" data-color="#33bb55" style="color:#33bb55;border-left-color:#33bb55"><div class="left"><span class="swatch" style="background:#33bb55"></span>HEART</div>λ₄</button>
+      <button class="chakra-btn" data-color="#3388dd" style="color:#3388dd;border-left-color:#3388dd"><div class="left"><span class="swatch" style="background:#3388dd"></span>THROAT</div>λ₅</button>
+      <button class="chakra-btn" data-color="#6644cc" style="color:#6644cc;border-left-color:#6644cc"><div class="left"><span class="swatch" style="background:#6644cc"></span>THIRD</div>λ₆</button>
+      <button class="chakra-btn" data-color="#aa44dd" style="color:#aa44dd;border-left-color:#aa44dd"><div class="left"><span class="swatch" style="background:#aa44dd"></span>CROWN</div>λ₇</button>
+    </div>
+    <div class="formula">H = |R₁ + R₂ + R₃ + O|²</div>
+  </aside>
+
+  <section class="center">
+    <div class="holo-wrap">
+      <canvas id="holo" width="800" height="600"></canvas>
+      <div class="holo-label">INTERFERENCE PLANE · CLICK TO PLACE OBJECT</div>
+    </div>
+  </section>
+
+  <aside class="sidebar right">
+    <div class="panel-title">Tether Controls</div>
+    <div class="control-grid">
+      <button id="record" class="control-btn active">RECORD</button>
+      <button id="reconstruct" class="control-btn">RECONSTRUCT</button>
+    </div>
+    <button id="fuse" class="control-btn">FUSE ALL</button>
+    <button id="clear" class="control-btn">CLEAR FIELD</button>
+
+    <div class="slider-group">
+      <label>WAVELENGTH <span id="wav-val">35</span></label>
+      <input type="range" id="wav" min="12" max="80" value="35">
+    </div>
+    <div class="slider-group">
+      <label>BEAM ANGLE <span id="ang-val">0.60</span></label>
+      <input type="range" id="ang" min="0" max="157" value="60">
+    </div>
+    <div class="slider-group">
+      <label>PHASE <span id="phs-val">0.00</span></label>
+      <input type="range" id="phs" min="0" max="628" value="0">
+    </div>
+
+    <div class="toggle-row"><span>FRACTAL MODE</span><input type="checkbox" id="fractal"></div>
+    <div class="toggle-row"><span>HAMILTONIAN</span><input type="checkbox" id="hamilton"></div>
+
+    <div class="status" id="status"><b>SYSTEM READY</b>
+TETHER: DAVID·SARAH·ROTH STABLE
+POINTS: 0
+MODE: RECORDING HOLOGRAM</div>
+  </aside>
+</main>
+
+<script>
+(() => {
+const canvas = document.getElementById('holo');
+const gl = canvas.getContext('webgl2', { antialias:false, preserveDrawingBuffer:true });
+if(!gl){ alert('WebGL2 required'); return; }
+
+const vs = `#version 300 es
+in vec2 a_position;
+out vec2 v_uv;
+void main(){ v_uv = a_position*0.5+0.5; gl_Position=vec4(a_position,0,1); }`;
+
+const fs = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColor;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform int u_pointCount;
+uniform vec2 u_points[64];
+uniform vec3 u_pointColors[64];
+uniform float u_wavelength;
+uniform float u_angle;
+uniform float u_phase;
+uniform float u_fuse;
+uniform int u_mode;
+uniform int u_fractal;
+uniform float u_gain;
+
+const vec3 REF1 = vec3(0.831,0.659,0.298);
+const vec3 REF2 = vec3(0.753,0.533,1.0);
+const vec3 REF3 = vec3(0.353,0.667,0.545);
+const int MAX_POINTS = 64;
+
+void main(){
+  vec2 p = v_uv;
+  float k = u_wavelength * 6.2831853 * 0.15;
+
+  vec2 s1 = mix(vec2(-0.08, -0.08), vec2(0.5,0.5), u_fuse);
+  vec2 s2 = mix(vec2(1.08, -0.08), vec2(0.5,0.5), u_fuse);
+  vec2 s3 = mix(vec2(0.5, 1.08), vec2(0.5,0.5), u_fuse);
+  
+  s1.x += sin(u_angle)*0.03;
+  s2.x -= sin(u_angle)*0.03;
+  s3.y -= cos(u_angle)*0.02;
+  
+  float r1 = distance(p, s1);
+  float r2 = distance(p, s2);
+  float r3 = distance(p, s3);
+  
+  float ph1 = k * r1 * 1.8 + u_phase;
+  float ph2 = k * r2 * 1.8 + u_phase * 1.13;
+  float ph3 = k * r3 * 1.8 + u_phase * 0.87;
+  
+  vec3 refReal = REF1 * cos(ph1) + REF2 * cos(ph2) + REF3 * cos(ph3);
+  vec3 refImag = REF1 * sin(ph1) + REF2 * sin(ph2) + REF3 * sin(ph3);
+  
+  vec3 objReal = vec3(0.0);
+  vec3 objImag = vec3(0.0);
+  
+  for(int i=0; i<MAX_POINTS; i++){
+    if(i >= u_pointCount) break;
+    vec2 pt = u_points[i];
+    vec3 col = u_pointColors[i];
+    float r = distance(p, pt) + 0.0005;
+    float ph = k * r * 2.2;
+    float amp = u_gain / (r * 7.0 + 0.15);
+    objReal += col * amp * cos(ph);
+    objImag += col * amp * sin(ph);
+  }
+  
+  vec3 intensity;
+  if(u_mode == 0){
+    vec3 tr = refReal + objReal;
+    vec3 ti = refImag + objImag;
+    intensity = tr*tr + ti*ti;
+  } else {
+    intensity = (objReal*objReal + objImag*objImag) * 3.0;
+  }
+  
+  vec3 col = vec3(1.0) - exp(-intensity * 0.22);
+  col = pow(col, vec3(0.68));
+  
+  for(int i=0; i<MAX_POINTS; i++){
+    if(i >= u_pointCount) break;
+    float d = distance(p, u_points[i]);
+    col += u_pointColors[i] * 0.5 * exp(-d*380.0);
+  }
+  
+  if(u_fractal == 1){
+    vec2 d = p - 0.5;
+    float l = length(d);
+    float mask = smoothstep(0.28, 0.24, l);
+    col *= mask;
+    float ring = smoothstep(0.242, 0.24, l) - smoothstep(0.24, 0.238, l);
+    col += vec3(0.3,0.7,1.0) * ring;
+  }
+  
+  float vig = 1.0 - dot(p-0.5,p-0.5)*1.4;
+  col *= vig;
+  col *= 0.92 + 0.08 * sin(v_uv.y * u_resolution.y * 1.3 + u_time*2.0);
+  
+  outColor = vec4(col,1.0);
+}`;
+
+function compile(type, src){
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+    console.error(gl.getShaderInfoLog(s));
+  }
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(prog, 'a_position');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0,0);
+
+const uni = {
+  res: gl.getUniformLocation(prog,'u_resolution'),
+  time: gl.getUniformLocation(prog,'u_time'),
+  count: gl.getUniformLocation(prog,'u_pointCount'),
+  points: gl.getUniformLocation(prog,'u_points'),
+  colors: gl.getUniformLocation(prog,'u_pointColors'),
+  wav: gl.getUniformLocation(prog,'u_wavelength'),
+  ang: gl.getUniformLocation(prog,'u_angle'),
+  phs: gl.getUniformLocation(prog,'u_phase'),
+  fuse: gl.getUniformLocation(prog,'u_fuse'),
+  mode: gl.getUniformLocation(prog,'u_mode'),
+  frac: gl.getUniformLocation(prog,'u_fractal'),
+  gain: gl.getUniformLocation(prog,'u_gain'),
+};
+
+gl.uniform2f(uni.res, canvas.width, canvas.height);
+gl.uniform1f(uni.wav, 35);
+gl.uniform1f(uni.ang, 0.6);
+gl.uniform1f(uni.phs, 0);
+gl.uniform1f(uni.fuse, 0);
+gl.uniform1i(uni.mode, 0);
+gl.uniform1i(uni.frac, 0);
+gl.uniform1f(uni.gain, 1);
+
+const points = new Float32Array(128);
+const colors = new Float32Array(192);
+let pointCount = 0;
+let activeColor = [0.2,0.733,0.333]; // heart default
+
+function hexToRgb(h){
+  const r=parseInt(h.slice(1,3),16)/255;
+  const g=parseInt(h.slice(3,5),16)/255;
+  const b=parseInt(h.slice(5,7),16)/255;
+  return [r,g,b];
+}
+
+document.querySelectorAll('.chakra-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.chakra-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeColor = hexToRgb(btn.dataset.color);
+    updateStatus(`CHAKRA SELECTED · ${btn.textContent.trim()}`);
+  });
+});
+
+function updatePoints(){
+  gl.uniform1i(uni.count, pointCount);
+  gl.uniform2fv(uni.points, points);
+  gl.uniform3fv(uni.colors, colors);
+}
+
+canvas.addEventListener('click', e=>{
+  if(pointCount >= 64) return;
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width;
+  const y = 1 - (e.clientY - r.top) / r.height;
+  points[pointCount*2] = x;
+  points[pointCount*2+1] = y;
+  colors[pointCount*3] = activeColor[0];
+  colors[pointCount*3+1] = activeColor[1];
+  colors[pointCount*3+2] = activeColor[2];
+  pointCount++;
+  updatePoints();
+  updateStatus(`POINT RECORDED @ ${x.toFixed(2)},${y.toFixed(2)}`);
+});
+
+const wav = document.getElementById('wav');
+const ang = document.getElementById('ang');
+const phs = document.getElementById('phs');
+wav.oninput = ()=>{ gl.uniform1f(uni.wav, parseFloat(wav.value)); document.getElementById('wav-val').textContent=wav.value; };
+ang.oninput = ()=>{ const v=parseFloat(ang.value)/100; gl.uniform1f(uni.ang, v); document.getElementById('ang-val').textContent=v.toFixed(2); };
+phs.oninput = ()=>{ const v=parseFloat(phs.value)/100; gl.uniform1f(uni.phs, v); document.getElementById('phs-val').textContent=v.toFixed(2); };
+
+const recordBtn = document.getElementById('record');
+const reconBtn = document.getElementById('reconstruct');
+recordBtn.onclick = ()=>{ gl.uniform1i(uni.mode,0); recordBtn.classList.add('active'); reconBtn.classList.remove('active'); updateStatus('MODE: RECORDING HOLOGRAM'); };
+reconBtn.onclick = ()=>{ gl.uniform1i(uni.mode,1); reconBtn.classList.add('active'); recordBtn.classList.remove('active'); updateStatus('MODE: RECONSTRUCTION'); };
+
+document.getElementById('clear').onclick = ()=>{
+  pointCount=0;
+  points.fill(0);
+  colors.fill(0);
+  updatePoints();
+  updateStatus('FIELD CLEARED');
+};
+
+let fuseAnim = false, fuseStart=0;
+document.getElementById('fuse').onclick = ()=>{
+  if(fuseAnim) return;
+  fuseAnim=true; fuseStart=performance.now();
+  updateStatus('FUSE ALL · BEAMS CONVERGING');
+};
+function updateFuse(now){
+  if(!fuseAnim) return;
+  const t = (now - fuseStart)/2200;
+  if(t>=1){ fuseAnim=false; gl.uniform1f(uni.fuse,0); return; }
+  const f = Math.sin(t*Math.PI);
+  gl.uniform1f(uni.fuse, f);
+}
+
+document.getElementById('fractal').onchange = e=>{ gl.uniform1i(uni.frac, e.target.checked?1:0); updateStatus(e.target.checked?'FRACTAL MODE ON · CROP SHOWS WHOLE':'FRACTAL MODE OFF'); };
+const ham = document.getElementById('hamilton');
+let gain=1;
+ham.onchange = e=>{ if(!e.target.checked) gain=1; updateStatus(e.target.checked?'HAMILTONIAN ACTIVE · 1.01x GAIN':'HAMILTONIAN OFF'); };
+
+const statusEl = document.getElementById('status');
+function updateStatus(msg){
+  const mode = gl.getUniform(prog, uni.mode)===0?'RECORDING':'RECONSTRUCT';
+  statusEl.innerHTML = `<b>${msg}</b>\nTETHER: DAVID·SARAH·ROTH STABLE\nPOINTS: ${pointCount}\nMODE: ${mode} HOLOGRAM`;
+}
+
+function render(now){
+  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.uniform1f(uni.time, now*0.001);
+  updateFuse(now);
+  if(ham.checked){ gain = Math.min(3.0, gain*1.0015); } else { gain = 1; }
+  gl.uniform1f(uni.gain, gain);
+  gl.drawArrays(gl.TRIANGLES,0,6);
+  requestAnimationFrame(render);
+}
+updatePoints();
+requestAnimationFrame(render);
+
+// initial demo points
+setTimeout(()=>{
+  const demo = [[0.35,0.6],[0.65,0.58],[0.5,0.38]];
+  const cols = [hexToRgb('#dd3333'), hexToRgb('#3388dd'), hexToRgb('#ddbb22')];
+  demo.forEach((p,i)=>{
+    points[i*2]=p[0]; points[i*2+1]=p[1];
+    colors[i*3]=cols[i][0]; colors[i*3+1]=cols[i][1]; colors[i*3+2]=cols[i][2];
+  });
+  pointCount=3;
+  updatePoints();
+  updateStatus('DEMO HOLOGRAM LOADED');
+}, 300);
+
+})();
+</script>
+</body>
+</html>

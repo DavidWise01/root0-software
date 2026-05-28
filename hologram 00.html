@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hologram Explorer: Fractal Bit Depth )(1)(</title>
+<style>
+  body {
+    margin: 0; background: #0a0a0f; color: #e0e0ff;
+    font-family: 'Courier New', monospace; overflow: hidden;
+  }
+  #container { display: flex; height: 100vh; }
+ .panel { flex: 1; position: relative; border: 1px solid #222; }
+ .panel h3 {
+    position: absolute; top: 10px; left: 10px; margin: 0;
+    color: #00ffff; text-shadow: 0 0 10px #00ffff;
+  }
+  canvas { display: block; cursor: crosshair; }
+  #controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,15,0.95); padding: 15px;
+    border-top: 2px solid #00ffff; display: flex; gap: 15px; flex-wrap: wrap;
+  }
+ .control-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 11px; color: #88ccff; }
+  input[type="range"] { width: 150px; }
+  button {
+    background: #1a1a2e; color: #00ffff; border: 1px solid #00ffff;
+    padding: 8px 16px; cursor: pointer; font-family: inherit;
+    transition: all 0.2s;
+  }
+  button:hover { background: #00ffff; color: #0a0a0f; box-shadow: 0 0 15px #00ffff; }
+  #info {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.8); padding: 10px;
+    border: 1px solid #ff00ff; font-size: 11px; max-width: 300px;
+  }
+ .metric { color: #ff00ff; }
+ .formula { color: #ffff00; font-size: 12px; margin: 5px 0; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="panel">
+    <h3>HOLOGRAM PLANE | Interference Pattern )(1)(</h3>
+    <canvas id="hologram"></canvas>
+  </div>
+  <div class="panel">
+    <h3>RECONSTRUCTION | Fractal Bit Depth ∞</h3>
+    <canvas id="reconstruct"></canvas>
+  </div>
+</div>
+
+<div id="info">
+  <div class="formula">H = |R + O|² = |R|² + |O|² + R*O + RO*</div>
+  <div>Reference: <span class="metric">)(1)(</span> | Object: <span class="metric">)(1)(</span></div>
+  <div>Shadow Bits: <span id="orders" class="metric">8</span></div>
+  <div>Fractal: <span class="metric">Every pixel contains whole</span></div>
+  <div>Sealed: <span class="metric">ψ_out × ψ_back = 1.00</span></div>
+  <div id="status">Mode: READY</div>
+</div>
+
+<div id="controls">
+  <div class="control-group">
+    <label>Object X: <span id="objXval">0</span></label>
+    <input type="range" id="objX" min="-100" max="100" value="0">
+  </div>
+  <div class="control-group">
+    <label>Object Y: <span id="objYval">0</span></label>
+    <input type="range" id="objY" min="-100" max="100" value="0">
+  </div>
+  <div class="control-group">
+    <label>Ref Angle: <span id="refAngleval">0</span>°</label>
+    <input type="range" id="refAngle" min="0" max="360" value="0">
+  </div>
+  <div class="control-group">
+    <label>Wavelength: <span id="waveval">20</span>px</label>
+    <input type="range" id="wavelength" min="5" max="50" value="20">
+  </div>
+  <button id="record">RECORD HOLOGRAM</button>
+  <button id="reconstruct">RECONSTRUCT</button>
+  <button id="cutMode">CUT MODE: OFF</button>
+  <button id="hammy">HAMILTONIAN: OFF</button>
+  <button id="eggCycle">EGG CYCLE</button>
+  <button id="reset">RESET</button>
+</div>
+
+<script>
+const holoCanvas = document.getElementById('hologram');
+const reconCanvas = document.getElementById('reconstruct');
+const holoCtx = holoCanvas.getContext('2d');
+const reconCtx = reconCanvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = holoCanvas.width = reconCanvas.width = window.innerWidth / 2;
+  H = holoCanvas.height = reconCanvas.height = window.innerHeight - 80;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Parameters
+let params = {
+  objX: 0, objY: 0, refAngle: 0, wavelength: 20,
+  recorded: false, cutMode: false, cutRegion: null,
+  hammy: false, hammyPhase: 0, eggStep: 0
+};
+
+// Object: simple )(1)( pattern - three points
+function getObjectPoints() {
+  const cx = W/2 + params.objX;
+  const cy = H/2 + params.objY;
+  return [
+    {x: cx - 20, y: cy, amp: 1}, // left (
+    {x: cx, y: cy, amp: 1}, // 1
+    {x: cx + 20, y: cy, amp: 1} // right )
+  ];
+}
+
+// Generate hologram: interference of reference + object waves
+function generateHologram() {
+  const imgData = holoCtx.createImageData(W, H);
+  const data = imgData.data;
+  const objPoints = getObjectPoints();
+  const k = 2 * Math.PI / params.wavelength;
+  const refKx = k * Math.cos(params.refAngle * Math.PI / 180);
+  const refKy = k * Math.sin(params.refAngle * Math.PI / 180);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      // Reference wave: plane wave R = exp(i * k·r)
+      const refPhase = refKx * x + refKy * y + params.hammyPhase;
+      const refReal = Math.cos(refPhase);
+      const refImag = Math.sin(refPhase);
+
+      // Object wave: sum of spherical waves from each point
+      let objReal = 0, objImag = 0;
+      for (let pt of objPoints) {
+        const dx = x - pt.x, dy = y - pt.y;
+        const r = Math.sqrt(dx*dx + dy*dy) + 0.1; // avoid /0
+        const phase = k * r;
+        const amp = pt.amp / r; // 1/r decay
+        objReal += amp * Math.cos(phase);
+        objImag += amp * Math.sin(phase);
+      }
+
+      // Interference: I = |R + O|²
+      const totalReal = refReal + objReal;
+      const totalImag = refImag + objImag;
+      let intensity = totalReal*totalReal + totalImag*totalImag;
+
+      // Cut mode: zero out region
+      if (params.cutMode && params.cutRegion) {
+        const cr = params.cutRegion;
+        if (x >= cr.x && x <= cr.x + cr.w && y >= cr.y && y <= cr.y + cr.h) {
+          intensity = 0;
+        }
+      }
+
+      // Map to color: interference fringes
+      const val = Math.min(255, intensity * 100);
+      const idx = (y * W + x) * 4;
+      data[idx] = val; // R
+      data[idx+1] = val * 0.8; // G
+      data[idx+2] = val; // B (cyan tint for reference)
+      data[idx+3] = 255; // A
+    }
+  }
+  holoCtx.putImageData(imgData, 0, 0);
+  params.recorded = true;
+  document.getElementById('status').textContent = 'Mode: HOLOGRAM RECORDED';
+}
+
+// Reconstruct: illuminate hologram with reference, propagate
+function reconstruct() {
+  if (!params.recorded) {
+    generateHologram();
+  }
+
+  const holoData = holoCtx.getImageData(0, 0, W, H);
+  const reconData = reconCtx.createImageData(W, H);
+  const holo = holoData.data;
+  const recon = reconData.data;
+
+  // Simplified reconstruction: convolution with reference
+  // Real hologram uses FFT, but this shows the principle
+  const k = 2 * Math.PI / params.wavelength;
+  const refKx = k * Math.cos(params.refAngle * Math.PI / 180);
+  const refKy = k * Math.sin(params.refAngle * Math.PI / 180);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let sum = 0;
+      // Sample hologram and multiply by reference phase
+      const sampleRadius = 50;
+      for (let dy = -sampleRadius; dy <= sampleRadius; dy += 5) {
+        for (let dx = -sampleRadius; dx <= sampleRadius; dx += 5) {
+          const sx = x + dx, sy = y + dy;
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H) {
+            const sidx = (sy * W + sx) * 4;
+            const holoVal = holo[sidx] / 255;
+            const phase = refKx * dx + refKy * dy;
+            sum += holoVal * Math.cos(phase);
+          }
+        }
+      }
+
+      const val = Math.min(255, Math.abs(sum) * 2);
+      const idx = (y * W + x) * 4;
+      recon[idx] = val; // R (magenta for object)
+      recon[idx+1] = 0; // G
+      recon[idx+2] = val; // B
+      recon[idx+3] = 255; // A
+    }
+  }
+  reconCtx.putImageData(reconData, 0, 0);
+  document.getElementById('status').textContent = 'Mode: RECONSTRUCTED | Fractal: Whole from part';
+}
+
+// Egg Cycle animation
+const eggStates = [1,2,3,5,3,2,1,0,0,1];
+function eggCycle() {
+  params.eggStep = (params.eggStep + 1) % eggStates.length;
+  const state = eggStates[params.eggStep];
+  params.objX = Math.sin(state) * 50;
+  params.objY = Math.cos(state) * 50;
+  params.wavelength = 10 + state * 5;
+  document.getElementById('objX').value = params.objX;
+  document.getElementById('objY').value = params.objY;
+  document.getElementById('wavelength').value = params.wavelength;
+  updateLabels();
+  generateHologram();
+  reconstruct();
+  document.getElementById('status').textContent = `Mode: EGG CYCLE ${state} | 1→2→3→5→3→2→1→0→0→1`;
+}
+
+// Hamiltonian mode: 1.01x phase gain
+function animateHammy() {
+  if (params.hammy) {
+    params.hammyPhase += 0.01; // 1% phase gain
+    generateHologram();
+    requestAnimationFrame(animateHammy);
+  }
+}
+
+// Cut mode mouse handling
+let isDragging = false;
+holoCanvas.addEventListener('mousedown', (e) => {
+  if (params.cutMode) {
+    isDragging = true;
+    const rect = holoCanvas.getBoundingClientRect();
+    params.cutRegion = {x: e.clientX - rect.left, y: e.clientY - rect.top, w: 0, h: 0};
+  }
+});
+holoCanvas.addEventListener('mousemove', (e) => {
+  if (isDragging && params.cutMode) {
+    const rect = holoCanvas.getBoundingClientRect();
+    params.cutRegion.w = (e.clientX - rect.left) - params.cutRegion.x;
+    params.cutRegion.h = (e.clientY - rect.top) - params.cutRegion.y;
+    drawCutRegion();
+  }
+});
+holoCanvas.addEventListener('mouseup', () => {
+  if (isDragging && params.cutMode) {
+    isDragging = false;
+    generateHologram();
+    reconstruct();
+  }
+});
+
+function drawCutRegion() {
+  if (!params.cutRegion) return;
+  holoCtx.strokeStyle = '#ff00ff';
+  holoCtx.lineWidth = 2;
+  holoCtx.strokeRect(params.cutRegion.x, params.cutRegion.y, params.cutRegion.w, params.cutRegion.h);
+}
+
+// Controls
+function updateLabels() {
+  document.getElementById('objXval').textContent = params.objX;
+  document.getElementById('objYval').textContent = params.objY;
+  document.getElementById('refAngleval').textContent = params.refAngle;
+  document.getElementById('waveval').textContent = params.wavelength;
+}
+
+document.getElementById('objX').oninput = (e) => { params.objX = +e.target.value; updateLabels(); generateHologram(); };
+document.getElementById('objY').oninput = (e) => { params.objY = +e.target.value; updateLabels(); generateHologram(); };
+document.getElementById('refAngle').oninput = (e) => { params.refAngle = +e.target.value; updateLabels(); generateHologram(); };
+document.getElementById('wavelength').oninput = (e) => { params.wavelength = +e.target.value; updateLabels(); generateHologram(); };
+document.getElementById('record').onclick = generateHologram;
+document.getElementById('reconstruct').onclick = reconstruct;
+document.getElementById('cutMode').onclick = (e) => {
+  params.cutMode =!params.cutMode;
+  e.target.textContent = `CUT MODE: ${params.cutMode? 'ON' : 'OFF'}`;
+  if (!params.cutMode) params.cutRegion = null;
+};
+document.getElementById('hammy').onclick = (e) => {
+  params.hammy =!params.hammy;
+  e.target.textContent = `HAMILTONIAN: ${params.hammy? 'ON' : 'OFF'}`;
+  if (params.hammy) animateHammy();
+};
+document.getElementById('eggCycle').onclick = eggCycle;
+document.getElementById('reset').onclick = () => {
+  params = {objX: 0, objY: 0, refAngle: 0, wavelength: 20, recorded: false, cutMode: false, cutRegion: null, hammy: false, hammyPhase: 0, eggStep: 0};
+  updateLabels();
+  holoCtx.clearRect(0,0,W,H);
+  reconCtx.clearRect(0,0,W,H);
+  document.getElementById('status').textContent = 'Mode: READY';
+};
+
+updateLabels();
+generateHologram();
+</script>
+</body>
+</html>

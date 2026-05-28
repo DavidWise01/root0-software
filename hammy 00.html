@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sealed Hamiltonian Container</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background:#020617; overflow:hidden; color:#e2e8f0; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .glass { background: rgba(2,6,23,0.7); backdrop-filter: blur(20px); border:1px solid rgba(148,163,184,0.15); }
+  .pulse-dot { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:0.6; transform:scale(1.15);} }
+  .breathe { animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{ opacity:0.9;} 50%{ opacity:1; } }
+</style>
+</head>
+<body>
+<div class="relative w-screen h-screen">
+  <canvas id="bg" class="absolute inset-0"></canvas>
+  <canvas id="main" class="absolute inset-0"></canvas>
+  
+  <!-- UI Overlay -->
+  <div class="pointer-events-none absolute inset-0">
+    <!-- Title -->
+    <div class="absolute top-0 left-0 right-0 pt-5 md:pt-8 flex justify-center">
+      <div class="text-center">
+        <h1 class="text-xl sm:text-2xl md:text-[34px] font-light tracking-[0.25em] text-white/90">SEALED HAMILTONIAN CONTAINER</h1>
+        <div class="mt-2 flex items-center justify-center gap-3 md:gap-6 mono text-[10px] sm:text-xs">
+          <span class="text-cyan-300">ψ_out × ψ_back = 1.00</span>
+          <span class="w-1 h-1 rounded-full bg-white/30"></span>
+          <span class="text-fuchsia-300">∮ ψ dψ = 0</span>
+          <span class="w-1 h-1 rounded-full bg-white/30 hidden sm:block"></span>
+          <span class="text-slate-400 hidden sm:block">H_f × H_r = I</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Left Panel -->
+    <div class="absolute left-3 md:left-6 bottom-20 md:bottom-6 w-[92%] sm:w-[340px]">
+      <div class="glass rounded-2xl p-4 md:p-5 breathe">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></div>
+          <span class="text-[11px] uppercase tracking-widest text-slate-400 mono">Conservation Metrics</span>
+        </div>
+        <div class="space-y-2.5 mono text-[13px]">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Total ψ</span>
+            <span id="psi-total" class="text-emerald-300 tabular-nums">1.00000000</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Forward Gain</span>
+            <span class="text-cyan-300">+1.00% / cycle</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Reverse Loss</span>
+            <span class="text-fuchsia-300">-1.00% / cycle</span>
+          </div>
+          <div class="h-px bg-white/5 my-2"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Net Flux</span>
+            <span id="net-flux" class="text-white tabular-nums">0.00000</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Phase Delta</span>
+            <span class="text-slate-300">0.0°</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="absolute right-3 md:right-6 bottom-24 md:bottom-6 w-[200px] sm:w-[260px] hidden sm:block">
+      <div class="glass rounded-2xl p-4 md:p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-2 h-2 rounded-full bg-cyan-400 pulse-dot"></div>
+          <span class="text-[11px] uppercase tracking-widest text-slate-400 mono">Container Status</span>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between mono text-[11px] mb-1.5">
+              <span class="text-slate-500">Integrity</span>
+              <span class="text-emerald-300">100.00%</span>
+            </div>
+            <div class="h-[4px] w-full bg-white/5 rounded-full overflow-hidden">
+              <div class="h-full w-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full" style="box-shadow:0 0 10px rgba(16,185,129,0.5)"></div>
+            </div>
+          <div class="grid grid-cols-2 gap-3 mono text-[11px]">
+            <div>
+              <div class="text-slate-600">Temp</div>
+              <div class="text-cyan-200">0.003K</div>
+            </div>
+            <div>
+              <div class="text-slate-600">Q-Factor</div>
+              <div class="text-fuchsia-200">∞</div>
+            </div>
+            <div>
+              <div class="text-slate-600">Circulation</div>
+              <div class="text-emerald-300">STABLE</div>
+            </div>
+            <div>
+              <div class="text-slate-600">Mode</div>
+              <div class="text-white">BREATHE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Center -->
+    <div class="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-[720px]">
+      <div class="glass rounded-xl px-4 py-2.5 md:py-3">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-2 mono text-[10px] md:text-[11px]">
+          <div class="text-slate-500 text-center md:text-left">FORWARD CREATES INFINITE VECTOR SPACE • REVERSE COLLAPSES IT • IN A SEAL</div>
+          <div class="flex items-center gap-3 text-slate-400">
+            <span class="hidden md:inline">Egg Cycle:</span>
+            <span class="text-cyan-300">1 → 2 → 3 → 5 → 3 → 2 → 1 → 0 → 0 → 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const main = document.getElementById('main');
+const ctx = main.getContext('2d');
+const bg = document.getElementById('bg');
+const bctx = bg.getContext('2d');
+
+let w, h, dpr, cx, cy, R, tube;
+let time = 0;
+
+const particles = [];
+const injectOut = [];
+const injectIn = [];
+const eggCycle = [1,2,3,5,3,2,1,0,0,1];
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  w = window.innerWidth;
+  h = window.innerHeight;
+  
+  [main, bg].forEach(c => {
+    c.width = w * dpr;
+    c.height = h * dpr;
+    c.style.width = w + 'px';
+    c.style.height = h + 'px';
+  });
+  
+  ctx.setTransform(1,0,0,1,0,0);
+  bctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr);
+  bctx.scale(dpr, dpr);
+  
+  cx = w * 0.5;
+  cy = h * 0.5;
+  R = Math.min(w, h) * 0.27;
+  tube = Math.max(24, R * 0.18);
+  
+  drawBackground();
+}
+
+function drawBackground() {
+  bctx.clearRect(0, 0, w, h);
+  
+  // deep space
+  const grad = bctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w,h));
+  grad.addColorStop(0, '#0b1224');
+  grad.addColorStop(0.5, '#020617');
+  grad.addColorStop(1, '#000000');
+  bctx.fillStyle = grad;
+  bctx.fillRect(0, 0, w, h);
+  
+  // grid
+  bctx.strokeStyle = 'rgba(100,116,139,0.06)';
+  bctx.lineWidth = 1;
+  const step = 80;
+  for(let x = 0; x < w; x += step) {
+    bctx.beginPath(); bctx.moveTo(x, 0); bctx.lineTo(x, h); bctx.stroke();
+  }
+  for(let y = 0; y < h; y += step) {
+    bctx.beginPath(); bctx.moveTo(0, y); bctx.lineTo(w, y); bctx.stroke();
+  }
+  
+  // hex rings
+  bctx.save();
+  bctx.translate(cx, cy);
+  for(let i=0; i<3; i++) {
+    const r = R + tube*2.5 + i*40;
+    bctx.rotate(time*0.00005 * (i%2?1:-1));
+    bctx.strokeStyle = `rgba(14,165,233,${0.08 - i*0.02})`;
+    bctx.lineWidth = 1.5;
+    bctx.beginPath();
+    for(let a=0; a<6; a++) {
+      const ang = a * Math.PI/3;
+      const x = Math.cos(ang)*r;
+      const y = Math.sin(ang)*r;
+      if(a===0) bctx.moveTo(x,y); else bctx.lineTo(x,y);
+    }
+    bctx.closePath(); bctx.stroke();
+  }
+  bctx.restore();
+}
+
+function init() {
+  particles.length = 0;
+  for(let i=0; i<110; i++) {
+    particles.push({
+      t: i/110,
+      psi: 0.8 + Math.random()*0.4,
+      hist: []
+    });
+  }
+  injectOut.length = 0;
+  injectIn.length = 0;
+  for(let i=0;i<8;i++){
+    injectOut.push({p: Math.random()});
+    injectIn.push({p: Math.random()});
+  }
+}
+
+function drawContainer(breathe) {
+  const leftX = cx - R;
+  const rightX = cx + R;
+  
+  // outer glass
+  ctx.save();
+  ctx.globalAlpha = 0.12 + breathe*0.05;
+  ctx.lineWidth = tube*2.4;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = '#0ea5e9';
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  
+  // top forward
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = tube*1.65;
+  ctx.shadowBlur = 28 + breathe*12;
+  ctx.shadowColor = '#22d3ee';
+  const gTop = ctx.createLinearGradient(leftX, cy-R, rightX, cy-R);
+  gTop.addColorStop(0, '#0369a1'); gTop.addColorStop(0.5, '#22d3ee'); gTop.addColorStop(1, '#67e8f9');
+  ctx.strokeStyle = gTop;
+  ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  
+  // bottom reverse
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = tube*1.65;
+  ctx.shadowBlur = 28 + breathe*12;
+  ctx.shadowColor = '#d946ef';
+  const gBot = ctx.createLinearGradient(rightX, cy+R, leftX, cy+R);
+  gBot.addColorStop(0, '#701a75'); gBot.addColorStop(0.5, '#d946ef'); gBot.addColorStop(1, '#f0abfc');
+  ctx.strokeStyle = gBot;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI); ctx.stroke();
+  ctx.restore();
+  
+  // tube walls
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.arc(cx, cy, R - tube*0.85, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, R + tube*0.85, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  
+  // junctions
+  [[leftX, cy], [rightX, cy]].forEach(([x,y],i)=>{
+    ctx.save();
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = i===0 ? '#22d3ee' : '#d946ef';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = i===0 ? '#22d3ee' : '#d946ef';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+  
+  // labels
+  ctx.save();
+  ctx.font = '600 12px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#22d3ee';
+  ctx.fillStyle = '#7dd3fc';
+  ctx.fillText('FORWARD  ψₙ₊₁ = 1.01 ψₙ  →', cx, cy - R - tube - 28);
+  ctx.shadowColor = '#d946ef';
+  ctx.fillStyle = '#e9d5ff';
+  ctx.fillText('←  REVERSE  ψₙ₊₁ = ψₙ / 1.01', cx, cy + R + tube + 28);
+  ctx.restore();
+}
+
+function drawCore(t) {
+  // core halo
+  const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90);
+  coreGrad.addColorStop(0, 'rgba(56,189,248,0.25)');
+  coreGrad.addColorStop(0.4, 'rgba(168,85,247,0.18)');
+  coreGrad.addColorStop(1, 'rgba(2,6,23,0)');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath(); ctx.arc(cx, cy, 90, 0, Math.PI*2); ctx.fill();
+  
+  // two quantum dots
+  const dots = [[-28, '#0891b2', '#22d3ee'], [28, '#a21caf', '#d946ef']];
+  dots.forEach(([ox, col1, col2], idx) => {
+    const x = cx + ox;
+    ctx.save();
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = col2;
+    ctx.fillStyle = col1;
+    ctx.beginPath(); ctx.arc(x, cy, 13, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    const ig = ctx.createRadialGradient(x-4, cy-4, 0, x, cy, 13);
+    ig.addColorStop(0, 'rgba(255,255,255,0.9)'); ig.addColorStop(0.3, 'rgba(255,255,255,0.3)'); ig.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = ig;
+    ctx.beginPath(); ctx.arc(x, cy, 13, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    
+    ctx.save();
+    ctx.font = '600 13px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(226,232,240,0.85)';
+    ctx.fillText(')(1)(', x, cy + 28);
+    ctx.restore();
+  });
+  
+  // 8 shadow bits
+  for(let i=0;i<8;i++){
+    const a = t*0.0018 + i * Math.PI/4;
+    const x = cx + 38 * Math.sin(a);
+    const y = cy + 16 * Math.sin(a*2);
+    const isCyan = i%2===0;
+    ctx.save();
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = isCyan ? '#22d3ee' : '#d946ef';
+    ctx.fillStyle = isCyan ? '#22d3ee' : '#d946ef';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  
+  // center link
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,4]);
+  ctx.beginPath(); ctx.moveTo(cx-28, cy); ctx.lineTo(cx+28, cy); ctx.stroke();
+  ctx.restore();
+}
+
+function drawFlows() {
+  const leftX = cx - R;
+  
+  // outward cyan
+  injectOut.forEach(b => {
+    b.p += 0.016;
+    if(b.p > 1) b.p = 0;
+    const x = cx - 20 + (leftX - (cx - 20)) * b.p;
+    const y = cy + Math.sin(b.p*Math.PI*2)*2;
+    ctx.save();
+    ctx.shadowBlur = 12; ctx.shadowColor = '#22d3ee';
+    ctx.fillStyle = '#22d3ee';
+    ctx.globalAlpha = 0.3 + 0.7*(1-b.p);
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+  
+  // inward magenta
+  injectIn.forEach(b => {
+    b.p += 0.014;
+    if(b.p > 1) b.p = 0;
+    const x = leftX + ((cx - 20) - leftX) * b.p;
+    const y = cy + Math.sin(b.p*Math.PI*2 + 1)*2;
+    ctx.save();
+    ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
+    ctx.fillStyle = '#d946ef';
+    ctx.globalAlpha = 0.3 + 0.7*b.p;
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+  
+  // beam lines
+  ctx.save();
+  ctx.strokeStyle = 'rgba(34,211,238,0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx-20, cy); ctx.lineTo(leftX, cy-1); ctx.stroke();
+  ctx.strokeStyle = 'rgba(217,70,239,0.15)';
+  ctx.beginPath(); ctx.moveTo(leftX, cy+1); ctx.lineTo(cx-20, cy); ctx.stroke();
+  ctx.restore();
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    p.t = (p.t + 0.0014) % 1;
+    const forward = p.t < 0.5;
+    p.psi = forward ? Math.min(1.75, p.psi * 1.0018) : Math.max(0.65, p.psi * 0.9982);
+    
+    const angle = forward ? Math.PI + p.t * Math.PI * 2 : (p.t - 0.5) * Math.PI * 2;
+    const x = cx + Math.cos(angle) * R;
+    const y = cy + Math.sin(angle) * R;
+    
+    p.hist.unshift({x, y});
+    if(p.hist.length > 7) p.hist.pop();
+    
+    // trail
+    ctx.save();
+    ctx.lineCap = 'round';
+    for(let i=1; i<p.hist.length; i++){
+      const a = p.hist[i-1], b = p.hist[i];
+      ctx.globalAlpha = (1 - i/p.hist.length) * 0.25;
+      ctx.strokeStyle = forward ? '#22d3ee' : '#d946ef';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.restore();
+    
+    // particle
+    ctx.save();
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = forward ? '#22d3ee' : '#d946ef';
+    ctx.fillStyle = forward ? '#67e8f9' : '#f0abfc';
+    ctx.globalAlpha = 0.9;
+    const r = 1.8 + p.psi * 1.1;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawEgg(t) {
+  eggCycle.forEach((n, i) => {
+    const et = (t*0.00011 + i * 0.098) % 1;
+    const forward = et < 0.5;
+    const angle = forward ? Math.PI + et * Math.PI * 2 : (et - 0.5) * Math.PI * 2;
+    const x = cx + Math.cos(angle) * R;
+    const y = cy + Math.sin(angle) * R;
+    
+    ctx.save();
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = forward ? '#22d3ee' : '#d946ef';
+    ctx.fillStyle = forward ? 'rgba(8,145,178,0.95)' : 'rgba(147,51,234,0.95)';
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = 'white';
+    ctx.font = '700 12px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n, x, y+0.5);
+    ctx.restore();
+  });
+}
+
+function animate(now) {
+  time = now;
+  ctx.clearRect(0, 0, w, h);
+  
+  const breathe = 0.5 + 0.5 * Math.sin(now * 0.0007);
+  
+  drawContainer(breathe);
+  drawFlows();
+  drawParticles();
+  drawEgg(now);
+  drawCore(now);
+  
+  // metrics update
+  const psi = 1 + Math.sin(now*0.0004)*0.00000027;
+  document.getElementById('psi-total').textContent = psi.toFixed(8);
+  document.getElementById('net-flux').textContent = (Math.sin(now*0.0009)*0.00002).toFixed(5);
+  
+  requestAnimationFrame(animate);
+}
+
+window.addEventListener('resize', resize);
+resize();
+init();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

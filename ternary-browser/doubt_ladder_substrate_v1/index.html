@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Doubt Ladder Substrate</title>
+<style>
+:root{--bg:#02030a;--ink:#edfaff;--cyan:#67e8f9;--mint:#86efac;--gold:#facc15;--rose:#fb7185;--violet:#c084fc;--grid:rgba(103,232,249,.05)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#000;color:var(--ink);font-family:ui-monospace,monospace}
+body{padding:18px;background:radial-gradient(circle at 50% 42%,rgba(103,232,249,.15),transparent 30%),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),var(--bg);background-size:100% 100%,28px 28px,28px 28px}
+.app{max-width:1500px;margin:0 auto;border:1px solid rgba(103,232,249,.24);border-radius:28px;background:rgba(0,0,0,.43);overflow:hidden}
+header{padding:24px;border-bottom:1px solid rgba(103,232,249,.18);display:flex;justify-content:space-between;gap:18px;align-items:flex-end}
+h1{margin:0;font-size:clamp(38px,8vw,104px);font-weight:300;letter-spacing:.06em}.sub{font-size:12px;color:#a6dbe8;text-align:right;line-height:1.55}
+.grid{display:grid;grid-template-columns:350px 1fr 390px;gap:16px;padding:16px}@media(max-width:1120px){.grid{grid-template-columns:1fr}.stage{height:780px}.sub{text-align:left}}
+.box{border:1px solid rgba(103,232,249,.22);border-radius:20px;background:rgba(0,0,0,.52);padding:16px}.stage{height:780px;border:1px solid rgba(103,232,249,.22);border-radius:20px;overflow:hidden;position:relative}
+canvas{width:100%;height:100%;display:block}button{width:100%;border:1px solid rgba(103,232,249,.36);background:rgba(0,0,0,.36);color:var(--ink);border-radius:14px;padding:10px;font:inherit;cursor:pointer;text-transform:uppercase;font-weight:800}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.code{white-space:pre-wrap;font-size:12px;line-height:1.5;color:#d8fbff}.log{height:250px;overflow:auto;font-size:11px;line-height:1.45;border:1px solid rgba(103,232,249,.16);border-radius:16px;padding:10px;background:rgba(0,0,0,.35)}
+.hud{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}.tag{font-size:11px;border:1px solid rgba(103,232,249,.18);border-radius:999px;background:rgba(0,0,0,.62);padding:5px 8px}
+.card{border:1px solid rgba(103,232,249,.16);border-radius:16px;padding:12px;margin-bottom:10px;background:rgba(255,255,255,.035);font-size:12px;line-height:1.45}.card b{color:var(--mint)}
+</style></head>
+<body><div class="app"><header><div><h1>0 . 0</h1><div style="color:var(--mint)">doubt ladder substrate · one primitive · infinite edge</div></div><div class="sub">1 → 3 → 5 → 7 → 9 → 11<br/>ground doubt to hold truth</div></header>
+<div class="grid"><aside class="box">
+<div class="row"><button id="next">Next Rung</button><button id="prev">Prev Rung</button></div>
+<div class="row"><button id="auto">Auto</button><button id="ground">Ground</button></div>
+<div class="row"><button id="collapse">00 00</button><button id="safe">000|1</button></div>
+<div class="code" style="margin-top:18px">PRIMITIVE:
+0 . 0
+
+left | witness | right
+
+27 choices:
+3 × 3 × 3
+
+LADDER:
+1 = SELF
+3 = GROUP
+5 = COLLECT
+7 = COLLATE / SEND
+9 = PROPAGATE
+11 = REPEAT
+
+POWER-OF-2:
+double to control
+
+ODD LADDER:
+add witnesses to talk
+
+SAFE GROUND:
+000|1
+
+BAD COLLAPSE:
+00 00</div></aside>
+<main class="stage"><canvas id="canvas"></canvas><div class="hud"><div class="tag" id="rung">RUNG 1</div><div class="tag" id="mode">MODE SELF</div><div class="tag" id="states">STATES 3</div><div class="tag" id="groundTag">GROUND 1</div></div></main>
+<aside class="box"><div class="card"><b>1:</b> self / quantum doubt / the dot that can choose.</div><div class="card"><b>3:</b> left-dot-right / first triword frame.</div><div class="card"><b>5:</b> collect witnesses and sort signal from noise.</div><div class="card"><b>7:</b> send scouts while preserving a core.</div><div class="card"><b>9:</b> propagate as 3×3 broadcast plane.</div><div class="card"><b>11:</b> repeat after scout data returns.</div><div class="log" id="log"></div><div class="code" id="packet" style="margin-top:12px"></div></aside></div></div>
+<script>
+const $=id=>document.getElementById(id),cv=$("canvas"),ctx=cv.getContext("2d");let W=0,H=0,D=1;
+function resize(){const r=cv.getBoundingClientRect();D=Math.max(1,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*D;cv.height=H*D;ctx.setTransform(D,0,0,D,0,0)}new ResizeObserver(resize).observe(cv);resize();
+const RUNGS=[{n:1,mode:"SELF",states:3,meaning:"one quantum doubt",color:"#67e8f9"},{n:3,mode:"GROUP",states:27,meaning:"left dot right",color:"#86efac"},{n:5,mode:"COLLECT",states:243,meaning:"collect witnesses",color:"#facc15"},{n:7,mode:"COLLATE/SEND",states:2187,meaning:"send scouts, keep core",color:"#fb923c"},{n:9,mode:"PROPAGATE",states:19683,meaning:"3x3 broadcast plane",color:"#c084fc"},{n:11,mode:"REPEAT",states:177147,meaning:"scouts return, loop closes",color:"#fb7185"}];
+const VM={idx:0,cycle:0,auto:false,ground:true,collapse:false,log:[],particles:[],say(x){this.log.unshift("["+this.cycle+"] "+x);this.log=this.log.slice(0,100)},r(){return RUNGS[this.idx]},next(){this.cycle++;this.idx=(this.idx+1)%RUNGS.length;this.collapse=false;this.ground=true;this.say("rung "+this.r().n+" :: "+this.r().mode);this.spawn(this.r().color);ui()},prev(){this.cycle++;this.idx=(this.idx-1+RUNGS.length)%RUNGS.length;this.collapse=false;this.ground=true;this.say("return rung "+this.r().n+" :: "+this.r().mode);this.spawn(this.r().color);ui()},groundIt(){this.cycle++;this.ground=true;this.collapse=false;this.say("grounded to 000|1");this.spawn("#86efac");ui()},collapseIt(){this.cycle++;this.collapse=true;this.ground=false;this.say("00 00 collapse: no remainder");this.spawn("#fb7185");ui()},safe(){this.cycle++;this.collapse=false;this.ground=true;this.say("safe compression: 000|1");this.spawn("#67e8f9");ui()},spawn(c){for(let i=0;i<18;i++)this.particles.push({a:Math.random()*Math.PI*2,r:40+Math.random()*280,life:120,c})},packet(){return{artifact:"doubt_ladder_substrate",primitive:"0 . 0",rung:this.r().n,mode:this.r().mode,states:this.r().states,meaning:this.r().meaning,ground:this.ground,collapse:this.collapse,law:"ground doubt to hold truth"}}};
+function text(t,x,y,s=12,a=.8,c="#edfaff"){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;ctx.font=s+"px ui-monospace,monospace";ctx.textAlign="center";ctx.fillText(t,x,y);ctx.restore()}
+function line(x1,y1,x2,y2,a=.28,c="#67e8f9"){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore()}
+function draw(){ctx.clearRect(0,0,W,H);const cx=W/2,cy=H/2,r=VM.r(),color=VM.collapse?"#fb7185":r.color;ctx.save();ctx.strokeStyle=color;for(let i=0;i<18;i++){ctx.globalAlpha=.04+i*.006;ctx.beginPath();ctx.ellipse(cx,cy,120+i*36,60+i*17,VM.cycle*.003+i*.04,0,Math.PI*2);ctx.stroke()}ctx.restore();const L=[cx-190,cy],C=[cx,cy],R=[cx+190,cy];line(L[0],L[1],C[0],C[1],.35,color);line(C[0],C[1],R[0],R[1],.35,color);[["0",L],[".",C],["0",R]].forEach(([label,p],i)=>{ctx.save();ctx.fillStyle=i===1?"#facc15":color;ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=28;ctx.beginPath();ctx.arc(p[0],p[1],i===1?24:18,0,Math.PI*2);ctx.fill();ctx.restore();text(label,p[0],p[1]+9,i===1?46:34,.95,"#000")});const count=r.n;for(let i=0;i<count;i++){const a=i/count*Math.PI*2+VM.cycle*.01,rr=150+count*10,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*.55;ctx.save();ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.globalAlpha=.85;ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.restore();if(count<=7)text(String(i+1),x,y-10,9,.55,color)}const gx=cx,gy=cy+250;ctx.save();ctx.fillStyle=VM.ground?"#86efac":"#334155";ctx.shadowColor=VM.ground?"#86efac":"transparent";ctx.shadowBlur=20;ctx.beginPath();ctx.arc(gx,gy,VM.ground?18:10,0,Math.PI*2);ctx.fill();ctx.restore();text(VM.ground?"000|1":"00 00",gx,gy+42,18,.82,VM.ground?"#86efac":"#fb7185");VM.particles.forEach(p=>{p.life--;p.a+=.012;const x=cx+Math.cos(p.a)*p.r,y=cy+Math.sin(p.a)*p.r*.55;ctx.save();ctx.globalAlpha=Math.max(0,p.life/120);ctx.fillStyle=p.c;ctx.shadowColor=p.c;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();ctx.restore()});VM.particles=VM.particles.filter(p=>p.life>0);text("zoom into the dot: 1 → 3 → 5 → 7 → 9 → 11",cx,36,14,.75,"#86efac");text(r.mode+" · "+r.meaning,cx,H-42,18,.8,color);requestAnimationFrame(draw)}
+function ui(){const r=VM.r();$("rung").textContent="RUNG "+r.n;$("mode").textContent="MODE "+r.mode;$("states").textContent="STATES "+r.states;$("groundTag").textContent="GROUND "+(VM.ground?"1":"0");$("log").innerHTML=VM.log.map(x=>"<div>"+x+"</div>").join("");$("packet").textContent=JSON.stringify(VM.packet(),null,2)}
+$("next").onclick=()=>VM.next();$("prev").onclick=()=>VM.prev();$("ground").onclick=()=>VM.groundIt();$("collapse").onclick=()=>VM.collapseIt();$("safe").onclick=()=>VM.safe();$("auto").onclick=e=>{VM.auto=!VM.auto;e.target.textContent=VM.auto?"Pause":"Auto"};setInterval(()=>{if(VM.auto)VM.next()},950);VM.say("doubt ladder substrate online");ui();draw();
+</script></body></html>

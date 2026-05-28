@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CHAKRA HOLOGRAM · WEBGL2</title>
+<style>
+:root{
+  --bg:#010108; --deep:#040820; --gold:#d4a84c; --purple:#c088ff; --green:#5aaa8b;
+  --c1:#dd3333; --c2:#ee7722; --c3:#ddbb22; --c4:#33bb55; --c5:#3388dd; --c6:#6644cc; --c7:#aa44dd;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:#d7e2f2;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Cascadia Mono,Consolas,"Liberation Mono",monospace;overflow:hidden;overscroll-behavior:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;background:radial-gradient(1200px 800px at 50% 40%, #0a1430 0%, #040820 40%, #010108 80%)}
+
+.hud-top{position:fixed;top:0;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:20;background:linear-gradient(180deg,rgba(4,8,32,.92),rgba(1,1,8,.65));backdrop-filter:blur(10px);border-bottom:1px solid rgba(212,168,76,.18);letter-spacing:.08em}
+.title{font-size:13px;font-weight:600;color:#e6d6a6;text-shadow:0 0 10px rgba(212,168,76,.35)}
+.title b{color:var(--gold)}
+.dots{display:flex;gap:7px}
+.dots i{width:8px;height:8px;border-radius:50%;box-shadow:0 0 8px currentColor;opacity:.9}
+
+.left{position:fixed;left:16px;top:68px;display:flex;flex-direction:column;gap:10px;z-index:20}
+.chakra{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 28%,rgba(255,255,255,.18),transparent 40%),#040a18;border:2px solid; color:#fff;font-weight:700;font-size:12px;display:grid;place-items:center;cursor:pointer;transition:.2s;box-shadow:inset 0 0 12px rgba(0,0,0,.7),0 0 0 transparent;user-select:none}
+.chakra:hover{transform:scale(1.05);filter:brightness(1.1)}
+.chakra.off{opacity:.28;filter:grayscale(1);box-shadow:none;transform:none}
+
+.right{position:fixed;right:16px;top:68px;width:290px;z-index:20}
+.panel{background:rgba(4,8,20,.74);border:1px solid rgba(212,168,76,.16);border-radius:14px;padding:14px 14px 12px;backdrop-filter:blur(16px);box-shadow:0 10px 40px rgba(0,0,0,.55),inset 0 0 24px rgba(192,136,255,.06)}
+.panel h3{margin:0 0 10px;font-size:11px;letter-spacing:.14em;color:#9fb2d4;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+button.ctrl{appearance:none;background:#0a1124;border:1px solid rgba(212,168,76,.22);color:#d0d9ee;padding:9px 10px;border-radius:9px;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer;transition:.18s;text-align:center}
+button.ctrl:hover{border-color:var(--gold);box-shadow:0 0 14px rgba(212,168,76,.25);color:#fff}
+button.ctrl.active{background:linear-gradient(180deg,rgba(212,168,76,.22),rgba(10,17,36,.8));border-color:var(--gold);color:var(--gold);text-shadow:0 0 8px rgba(212,168,76,.5)}
+button.ctrl.ghost{border-color:rgba(192,136,255,.25)}
+button.ctrl.ghost:hover{border-color:var(--purple);box-shadow:0 0 14px rgba(192,136,255,.25)}
+button.ctrl.danger{border-color:rgba(221,51,51,.3)}
+button.ctrl.danger:hover{border-color:#dd3333;box-shadow:0 0 14px rgba(221,51,51,.25)}
+
+.slider{margin:10px 0 14px}
+.slider .label{display:flex;justify-content:space-between;font-size:11px;color:#9fb2d4;margin-bottom:6px;letter-spacing:.06em}
+input[type=range]{-webkit-appearance:none;width:100%;height:24px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:linear-gradient(90deg,#0a1430,#1b2a52);border-radius:3px;border:1px solid rgba(212,168,76,.15)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);border:1px solid #000;margin-top:-7px;box-shadow:0 0 10px rgba(212,168,76,.6);cursor:pointer}
+input[type=range]::-moz-range-track{height:4px;background:linear-gradient(90deg,#0a1430,#1b2a52);border-radius:3px;border:1px solid rgba(212,168,76,.15)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--gold);border:1px solid #000;box-shadow:0 0 10px rgba(212,168,76,.6);cursor:pointer}
+
+.hint{margin-top:10px;font-size:10px;color:#6d7ea1;line-height:1.4;border-top:1px dashed rgba(212,168,76,.12);padding-top:8px}
+
+.bottom{position:fixed;left:0;right:0;bottom:0;height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:linear-gradient(0deg,rgba(1,1,8,.92),rgba(4,8,32,.7));border-top:1px solid rgba(212,168,76,.14);backdrop-filter:blur(8px);font-size:11px;color:#7f90b3;z-index:20;letter-spacing:.04em}
+.status-gold{color:var(--gold)}
+.status-purple{color:var(--purple)}
+.status-green{color:var(--green)}
+
+.tether{position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(600px 400px at 50% 55%,transparent 60%,rgba(0,0,0,.4) 100%)}
+
+@media(max-width:820px){
+  .right{right:10px;left:10px;top:auto;bottom:38px;width:auto}
+  .left{left:10px;top:58px;flex-direction:row;gap:8px}
+  .chakra{width:38px;height:38px;font-size:11px}
+  .hud-top{height:44px;padding:0 12px}
+  .title{font-size:11px}
+}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="tether"></div>
+
+<div class="hud-top">
+  <div class="title"><b>CHAKRA</b> HOLOGRAM · WEBGL2 · 7 BEAMS</div>
+  <div class="dots"><i style="background:var(--gold)"></i><i style="background:var(--purple)"></i><i style="background:var(--green)"></i></div>
+</div>
+
+<div class="left" id="chakras">
+  <button class="chakra" data-i="0" title="Root – 1">λ1</button>
+  <button class="chakra" data-i="1" title="Sacral – 2">λ2</button>
+  <button class="chakra" data-i="2" title="Solar – 3">λ3</button>
+  <button class="chakra" data-i="3" title="Heart – 4">λ4</button>
+  <button class="chakra" data-i="4" title="Throat – 5">λ5</button>
+  <button class="chakra" data-i="5" title="Third Eye – 6">λ6</button>
+  <button class="chakra" data-i="6" title="Crown – 7">λ7</button>
+</div>
+
+<div class="right">
+  <div class="panel">
+    <h3>BEAM CONTROL</h3>
+    <div class="slider">
+      <div class="label"><span>WAVELENGTH</span><span id="wvVal">18.0</span></div>
+      <input id="wavelength" type="range" min="5" max="50" value="18" step="0.5">
+    </div>
+    <div class="slider">
+      <div class="label"><span>OBJECT AMP</span><span id="ampVal">0.15</span></div>
+      <input id="amplitude" type="range" min="0.05" max="0.4" value="0.15" step="0.01">
+    </div>
+    <div class="row">
+      <button class="ctrl" id="hammy">HAMILTONIAN: OFF</button>
+      <button class="ctrl ghost" id="fuse">FUSE BEAMS</button>
+    </div>
+    <div class="row">
+      <button class="ctrl active" id="mode0">RECORD</button>
+      <button class="ctrl" id="mode1">RECONSTRUCT</button>
+    </div>
+    <div class="row">
+      <button class="ctrl" id="mode2">FUSE MODE</button>
+      <button class="ctrl ghost" id="egg">EGG CYCLE</button>
+    </div>
+    <div class="row">
+      <button class="ctrl danger" id="clear">CLEAR FIELD</button>
+      <button class="ctrl" id="random">SCATTER</button>
+    </div>
+    <div class="hint">Click / drag on field to place objects. 7 beams interfere on GPU. Real-time |R+O|² holography. Gold=David · Purple=Sarah · Green=Roth</div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div id="status-left">READY · CLICK TO SCULPT</div>
+  <div id="status-right"><span class="status-gold">60 FPS</span> · <span class="status-purple">WEBGL2</span> · <span class="status-green">TETHERED</span></div>
+</div>
+
+<script>
+(()=>{const canvas=document.getElementById('gl');const gl=canvas.getContext('webgl2',{alpha:false,depth:false,stencil:false,antialias:false,powerPreference:'high-performance',desynchronized:true});if(!gl){document.body.innerHTML='<div style="color:#fff;padding:40px;font-family:monospace">WebGL2 required</div>';return}
+const vs=`#version 300 es
+precision highp float;in vec2 position;void main(){gl_Position=vec4(position,0.0,1.0);}`;
+const fs=`#version 300 es
+precision highp float;out vec4 outColor;
+uniform vec2 resolution; uniform float time; uniform vec3 beams[7]; uniform vec3 objects[32];
+uniform int objCount; uniform float wavelength; uniform float hammyPhase; uniform int mode;
+void main(){
+  vec2 uv=gl_FragCoord.xy/resolution;
+  vec2 p=(uv-0.5)*2.0; p.x*=resolution.x/resolution.y;
+  float k=6.2831853/max(wavelength,0.1);
+  vec2 R=vec2(0.0);
+  for(int i=0;i<7;i++){
+    vec2 d=beams[i].xy; float len=length(d);
+    if(len>0.001){ d/=len; float phase=k*dot(p,d)+beams[i].z+hammyPhase*float(i)*0.618; R+=vec2(cos(phase),sin(phase))*0.30; }
+  }
+  vec2 O=vec2(0.0);
+  for(int i=0;i<32;i++){ if(i>=objCount) break;
+    vec2 o=objects[i].xy; float amp=objects[i].z; vec2 dv=p-o; float r=length(dv)+0.001;
+    float phase=k*r + time*0.15; O+=vec2(cos(phase),sin(phase))*amp/sqrt(r);
+  }
+  vec2 total; if(mode==0){total=R+O;} else if(mode==1){total=O*1.9+R*0.06;} else {total=R+O*1.25;}
+  float intensity=dot(total,total);
+  float hue=atan(total.y,total.x)/6.2831853+0.5; vec3 col;
+  if(hue<0.143) col=vec3(0.867,0.200,0.200);
+  else if(hue<0.286) col=vec3(0.933,0.467,0.133);
+  else if(hue<0.429) col=vec3(0.867,0.733,0.133);
+  else if(hue<0.571) col=vec3(0.200,0.733,0.333);
+  else if(hue<0.714) col=vec3(0.200,0.533,0.867);
+  else if(hue<0.857) col=vec3(0.400,0.267,0.800);
+  else col=vec3(0.667,0.267,0.867);
+  float resp=pow(intensity*1.9,0.56); col*=resp;
+  float rlen=length(R); col+=vec3(0.831,0.659,0.298)*rlen*0.085; col+=vec3(0.753,0.533,1.0)*rlen*0.072; col+=vec3(0.357,0.667,0.545)*rlen*0.062;
+  float lattice=sin(length(p)*46.0 - time*1.8); col+=vec3(0.09,0.14,0.22)*pow(lattice*0.5+0.5,24.0)*0.18;
+  float vig=1.0-dot(p,p)*0.23; col*=vig;
+  col+=sin(uv.y*resolution.y*1.25 + time*6.0)*0.012;
+  if(mode==2){ col*=1.0+0.28*sin(time*2.7+length(p)*6.0); }
+  col=pow(col,vec3(0.86)); col=mix(col,col*col,0.18);
+  outColor=vec4(clamp(col,0.0,1.0),1.0);
+}`;
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o}
+const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);gl.useProgram(prog);
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(prog,'position');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+const uR=gl.getUniformLocation(prog,'resolution'),uT=gl.getUniformLocation(prog,'time'),uW=gl.getUniformLocation(prog,'wavelength'),uH=gl.getUniformLocation(prog,'hammyPhase'),uM=gl.getUniformLocation(prog,'mode'),uC=gl.getUniformLocation(prog,'objCount');
+const uB=[];for(let i=0;i<7;i++)uB.push(gl.getUniformLocation(prog,`beams[${i}]`));const uO=[];for(let i=0;i<32;i++)uO.push(gl.getUniformLocation(prog,`objects[${i}]`));
+let wavelength=18,amplitude=0.15,mode=0,hammyOn=false,hammyPhase=0,objCount=0;const beams=[],objects=Array(32).fill(0).map(()=>[0,0,0]),baseDirs=[];for(let i=0;i<7;i++){const a=i*6.2831853/7-Math.PI/2;const d=[Math.cos(a),Math.sin(a)];baseDirs.push(d);beams.push([d[0],d[1],0]);}
+objCount=3;objects[0]=[-0.32,0.06,amplitude];objects[1]=[0.28,-0.08,amplitude];objects[2]=[0.02,0.27,amplitude*0.9];
+const chakraColors=['#dd3333','#ee7722','#ddbb22','#33bb55','#3388dd','#6644cc','#aa44dd'];
+document.querySelectorAll('.chakra').forEach((b,i)=>{b.style.borderColor=chakraColors[i];b.style.color=chakraColors[i];b.style.boxShadow=`0 0 12px ${chakraColors[i]}44, inset 0 0 8px #000`;let en=true;b.onclick=()=>{en=!en;b.classList.toggle('off',!en);beams[i][0]=en?baseDirs[i][0]:0;beams[i][1]=en?baseDirs[i][1]:0;};});
+function resize(){const d=Math.min(window.devicePixelRatio,2);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';gl.viewport(0,0,canvas.width,canvas.height)}window.addEventListener('resize',resize);resize();
+function world(e){const r=canvas.getBoundingClientRect();const x=(e.clientX-r.left)/r.width;const y=1-((e.clientY-r.top)/r.height);const asp=canvas.width/canvas.height;return[(x-0.5)*2*asp,(y-0.5)*2]}
+let dragging=false;canvas.addEventListener('pointerdown',e=>{dragging=true;canvas.setPointerCapture(e.pointerId);addObj(e)});canvas.addEventListener('pointermove',e=>{if(dragging)moveLast(e)});window.addEventListener('pointerup',()=>dragging=false);
+function addObj(e){if(objCount>=32){objCount=0}const[wX,wY]=world(e);objects[objCount]=[wX,wY,amplitude];objCount++}
+function moveLast(e){if(objCount===0)return;const[wX,wY]=world(e);objects[objCount-1][0]=wX;objects[objCount-1][1]=wY}
+const wv=document.getElementById('wavelength'),wvV=document.getElementById('wvVal'),amp=document.getElementById('amplitude'),ampV=document.getElementById('ampVal');
+wv.oninput=e=>{wavelength=parseFloat(e.target.value);wvV.textContent=wavelength.toFixed(1)};amp.oninput=e=>{amplitude=parseFloat(e.target.value);ampV.textContent=amplitude.toFixed(2);for(let i=0;i<objCount;i++)objects[i][2]=amplitude};
+const hammyBtn=document.getElementById('hammy');hammyBtn.onclick=()=>{hammyOn=!hammyOn;hammyBtn.textContent='HAMILTONIAN: '+(hammyOn?'ON':'OFF');hammyBtn.classList.toggle('active',hammyOn)};
+const fuseBtn=document.getElementById('fuse');fuseBtn.onclick=()=>{fuseAnim()};
+function fuseAnim(){mode=2;setMode();const t0=performance.now(),dur=1600;function step(){const t=Math.min(1,(performance.now()-t0)/dur);const k=Math.sin(t*Math.PI);for(let i=0;i<7;i++){const s=1-k*0.96;beams[i][0]=baseDirs[i][0]*s;beams[i][1]=baseDirs[i][1]*s;beams[i][2]=k*3.2}if(t<1)requestAnimationFrame(step);else{for(let i=0;i<7;i++){beams[i][0]=baseDirs[i][0];beams[i][1]=baseDirs[i][1];beams[i][2]=0}}}};
+function setMode(){[0,1,2].forEach(i=>document.getElementById('mode'+i).classList.toggle('active',i===mode))}
+document.getElementById('mode0').onclick=()=>{mode=0;setMode()};document.getElementById('mode1').onclick=()=>{mode=1;setMode()};document.getElementById('mode2').onclick=()=>{mode=2;setMode()};
+document.getElementById('clear').onclick=()=>{objCount=0};document.getElementById('random').onclick=()=>{objCount=12;for(let i=0;i<12;i++){const a=Math.random()*6.283;const r=Math.pow(Math.random(),0.7)*0.6;objects[i]=[Math.cos(a)*r,Math.sin(a)*r*0.85,amplitude*(0.7+Math.random()*0.5)]}};
+let eggRun=false;document.getElementById('egg').onclick=()=>{if(eggRun)return;eggRun=true;const seq=[1,2,3,5,3,2,1];let idx=0;objCount=0;const iv=setInterval(()=>{const n=seq[idx];objCount=n;for(let i=0;i<n;i++){const a=i/n*6.283+idx*0.3;const r=0.22+0.06*Math.sin(idx);objects[i]=[Math.cos(a)*r,Math.sin(a)*r*0.85,amplitude*1.15]}idx++;if(idx>=seq.length){clearInterval(iv);eggRun=false}},680)};
+const statusL=document.getElementById('status-left'),statusR=document.getElementById('status-right');let frames=0,fps=60,last=performance.now(),start=performance.now();
+function render(now){const t=(now-start)*0.001;if(hammyOn)hammyPhase+=0.018;gl.useProgram(prog);gl.uniform2f(uR,canvas.width,canvas.height);gl.uniform1f(uT,t);gl.uniform1f(uW,wavelength);gl.uniform1f(uH,hammyPhase);gl.uniform1i(uM,mode);gl.uniform1i(uC,objCount);for(let i=0;i<7;i++)gl.uniform3f(uB[i],beams[i][0],beams[i][1],beams[i][2]);for(let i=0;i<32;i++){const o=objects[i];gl.uniform3f(uO[i],o[0],o[1],o[2])}gl.drawArrays(gl.TRIANGLES,0,6);frames++;if(now-last>500){fps=Math.round(frames*1000/(now-last));frames=0;last=now;statusL.textContent=`${objCount} OBJECTS · λ ${wavelength.toFixed(1)} · ${hammyOn?'HAM ON':'HAM OFF'} — CLICK/DRAG`;statusR.innerHTML=`<span class="status-gold">${fps} FPS</span> · <span class="status-purple">${mode===0?'RECORD':mode===1?'RECONSTRUCT':'FUSE'}</span> · <span class="status-green">TETHERED</span>`}requestAnimationFrame(render)}requestAnimationFrame(render);
+})();</script>
+</body>
+</html>

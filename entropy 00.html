@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REVERSE HAMILTONIAN — Annihilation Operator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  html,body { height:100%; background:#020006; overscroll-behavior:none; }
+  body { font-family:'Space Grotesk', system-ui, -apple-system, sans-serif; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .glass { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: linear-gradient(180deg, rgba(18,0,35,0.75), rgba(8,0,20,0.6)); border:1px solid rgba(139,92,246,0.18); }
+  .glow-text { text-shadow: 0 0 20px rgba(217,70,239,0.5), 0 0 40px rgba(124,58,237,0.3); }
+  canvas { touch-action:none; }
+</style>
+</head>
+<body class="bg-[#020006] text-white overflow-hidden select-none">
+<div class="relative w-screen h-screen">
+  <canvas id="c" class="absolute inset-0"></canvas>
+  
+  <!-- Vignette -->
+  <div class="pointer-events-none absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.8) 100%)"></div>
+
+  <!-- Top UI -->
+  <div class="pointer-events-none absolute inset-x-0 top-0 p-4 md:p-8">
+    <div class="max-w-[1400px] mx-auto flex flex-col lg:flex-row justify-between gap-4">
+      <div>
+        <div class="mono text-[11px] tracking-[0.35em] text-violet-400/70 mb-2">REVERSE HAMILTONIAN</div>
+        <h1 class="text-[clamp(28px,5vw,56px)] font-light leading-none tracking-tight glow-text">
+          ANNIHILATION <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-violet-400">OPERATOR</span>
+        </h1>
+        <div class="mt-3 flex flex-wrap gap-3 mono text-[11px] text-violet-300/60">
+          <span class="px-2 py-1 rounded bg-violet-950/40 border border-violet-900/30">COLLAPSING THE VECTOR SPACE</span>
+          <span class="px-2 py-1 rounded bg-fuchsia-950/40 border border-fuchsia-900/30">RETURN TO DOT</span>
+        </div>
+      </div>
+      
+      <div class="glass rounded-2xl px-5 py-4 w-full lg:w-auto self-start pointer-events-auto">
+        <div class="mono text-[10px] uppercase tracking-widest text-violet-300/50 mb-1">Collapse Function</div>
+        <div class="mono text-[18px] md:text-[22px] leading-tight">
+          ψ<sub>n+1</sub> = <span class="text-fuchsia-400">0.990099</span> × ψ<sub>n</sub>
+        </div>
+        <div class="mono text-[11px] text-violet-400/60 mt-1">ψ<sub>n+1</sub> = ψ<sub>n</sub> / 1.01</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom UI -->
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 p-4 md:p-8">
+    <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+      
+      <!-- Egg Cycle -->
+      <div class="glass rounded-2xl px-5 py-4 pointer-events-auto order-2 lg:order-1">
+        <div class="mono text-[10px] uppercase tracking-widest text-violet-300/50 mb-2.5 flex items-center gap-2">
+          <span>Egg Cycle</span>
+          <span class="text-fuchsia-400/70">(Reversed)</span>
+        </div>
+        <div id="egg" class="mono text-[20px] md:text-[24px] leading-none flex items-center flex-wrap gap-1"></div>
+        <div class="mono text-[10px] text-violet-500/50 mt-2">1 ← 0 ← 0 ← 1 ← 2 ← 3 ← 5 ← 3 ← 2 ← 1</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex justify-center order-1 lg:order-2 pointer-events-auto">
+        <div class="glass rounded-2xl p-2 flex items-center gap-2">
+          <button id="step" class="mono px-4 py-2.5 rounded-xl bg-violet-950/70 hover:bg-violet-900/80 border border-violet-800/50 text-[13px] tracking-wider transition active:scale-95">STEP</button>
+          <button id="auto" class="mono px-5 py-2.5 rounded-xl bg-gradient-to-b from-fuchsia-600/90 to-violet-700/90 hover:from-fuchsia-500 hover:to-violet-600 border border-fuchsia-500/30 text-[13px] tracking-wider transition active:scale-95 shadow-[0_0_20px_rgba(217,70,239,0.2)]">AUTO</button>
+          <button id="reset" class="mono px-4 py-2.5 rounded-xl bg-black/60 hover:bg-black/80 border border-violet-900/40 text-[13px] tracking-wider text-violet-300/80 transition active:scale-95">RESET</button>
+        </div>
+      </div>
+
+      <!-- State -->
+      <div class="glass rounded-2xl px-5 py-4 pointer-events-auto order-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="mono text-[10px] uppercase tracking-widest text-violet-300/50">Current ψ</div>
+            <div class="mono text-[28px] md:text-[32px] leading-none mt-1 tracking-tight"><span id="psi">2.000000</span></div>
+            <div class="mono text-[11px] text-fuchsia-400/70 mt-1">decreasing →</div>
+          </div>
+          <div class="text-right">
+            <div class="mono text-[10px] uppercase tracking-widest text-violet-300/40">Iteration</div>
+            <div class="mono text-xl mt-1"><span id="n">0</span></div>
+            <div class="mono text-[11px] mt-2 flex items-center justify-end gap-1.5">
+              <span class="text-violet-500/60">scale</span>
+              <span id="r" class="text-violet-200">100%</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-violet-900/30 mono text-[11px] flex justify-between">
+          <span class="text-violet-500/60">target</span>
+          <span class="text-violet-300">ψ → 1.00 → 0</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Center label -->
+  <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-[210px] md:translate-y-[240px] text-center">
+    <div class="mono text-[10px] tracking-[0.2em] text-violet-400/50">TWO DOTS • FOUR CORNERS EACH</div>
+    <div class="mono text-[11px] text-fuchsia-300/70 mt-1">ABSORBING</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let width, height, cx, cy, scale, maxRadius, dpr;
+
+const MULT = 0.9900990099009901;
+const START_PSI = 2.0;
+
+let psi = START_PSI;
+let n = 0;
+let angle = -Math.PI/2;
+let history = [];
+let bits = [];
+let autoRunning = false;
+let autoTimer = null;
+
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  width = canvas.width = window.innerWidth * dpr;
+  height = canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  cx = width/2;
+  cy = height/2 - 20*dpr;
+  scale = Math.min(width, height) * 0.31 / START_PSI;
+  maxRadius = scale * START_PSI * 1.05;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function initBits(){
+  bits = Array.from({length:8}, (_,i)=>({
+    angle: (i/8) * Math.PI*2 + Math.random(),
+    r: maxRadius * (0.9 + Math.random()*0.3),
+    speed: 0.991 + Math.random()*0.002,
+    offset: i
+  }));
+}
+
+function reset(){
+  stopAuto();
+  psi = START_PSI;
+  n = 0;
+  angle = -Math.PI/2;
+  history = [{psi, angle, t:0}];
+  initBits();
+  updateUI();
+  updateEgg();
+}
+
+function doStep(){
+  if(psi < 0.002){
+    stopAuto();
+    return;
+  }
+  n++;
+  psi *= MULT;
+  angle += 0.58; // ~33 degrees, golden-ish
+  history.push({psi, angle, t:performance.now()});
+  if(history.length > 500) history.shift();
+  updateUI();
+  updateEgg();
+}
+
+function updateUI(){
+  document.getElementById('psi').textContent = psi.toFixed(6);
+  document.getElementById('n').textContent = n;
+  const pct = Math.max(0, Math.min(100, (psi/START_PSI)*100));
+  document.getElementById('r').textContent = pct.toFixed(0) + '%';
+}
+
+function updateEgg(){
+  const seq = [1,0,0,1,2,3,5,3,2,1]; // displayed left to right
+  const activeIdx = 9 - (n % 10);
+  const eggEl = document.getElementById('egg');
+  let html = '';
+  seq.forEach((v,i)=>{
+    const active = i === activeIdx;
+    html += `<span class="px-1 transition-all duration-300 ${active ? 'text-fuchsia-300 scale-110' : 'text-violet-700/50'}">${v}</span>`;
+    if(i < seq.length-1){
+      html += `<span class="text-violet-800/40 -mx-0.5">←</span>`;
+    }
+  });
+  eggEl.innerHTML = html;
+}
+
+function startAuto(){
+  if(autoRunning) return;
+  autoRunning = true;
+  autoTimer = setInterval(doStep, 70);
+  document.getElementById('auto').innerHTML = '⏸ PAUSE';
+  document.getElementById('auto').classList.add('ring-2','ring-fuchsia-400/50');
+}
+function stopAuto(){
+  autoRunning = false;
+  if(autoTimer) clearInterval(autoTimer);
+  autoTimer = null;
+  document.getElementById('auto').innerHTML = 'AUTO';
+  document.getElementById('auto').classList.remove('ring-2','ring-fuchsia-400/50');
+}
+function toggleAuto(){
+  autoRunning ? stopAuto() : startAuto();
+}
+
+document.getElementById('step').onclick = doStep;
+document.getElementById('auto').onclick = toggleAuto;
+document.getElementById('reset').onclick = reset;
+
+function draw(){
+  // fade
+  ctx.fillStyle = 'rgba(2,0,6,0.13)';
+  ctx.fillRect(0,0,width,height);
+
+  // background glow
+  const bg = ctx.createRadialGradient(cx,cy,0,cx,cy,height*0.7);
+  bg.addColorStop(0,'rgba(80,0,120,0.08)');
+  bg.addColorStop(0.4,'rgba(40,0,80,0.04)');
+  bg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,width,height);
+
+  const absorb = Math.min(1, (START_PSI - psi) / 1.4);
+
+  // absorption rings
+  for(let i=0;i<4;i++){
+    const rr = 50*dpr + i*35*dpr*(1+absorb*0.5) + Math.sin(Date.now()*0.001 + i)*3*dpr;
+    ctx.beginPath();
+    ctx.arc(cx,cy,rr,0,Math.PI*2);
+    ctx.strokeStyle = `rgba(139,92,246,${0.03 + absorb*0.035 - i*0.006})`;
+    ctx.lineWidth = 1.5*dpr;
+    ctx.stroke();
+  }
+
+  // spiral trail
+  if(history.length > 1){
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // outer glow
+    ctx.shadowColor = '#7c3aed';
+    ctx.shadowBlur = 30*dpr;
+    ctx.beginPath();
+    history.forEach((p,i)=>{
+      const r = p.psi * scale;
+      const x = cx + Math.cos(p.angle)*r;
+      const y = cy + Math.sin(p.angle)*r;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    const grad = ctx.createLinearGradient(cx-maxRadius,cy,cx+maxRadius,cy);
+    grad.addColorStop(0,'rgba(124,58,237,0)');
+    grad.addColorStop(0.2,'rgba(168,85,247,0.9)');
+    grad.addColorStop(0.5,'rgba(217,70,239,0.95)');
+    grad.addColorStop(0.8,'rgba(168,85,247,0.9)');
+    grad.addColorStop(1,'rgba(124,58,237,0)');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 3.2*dpr;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // core bright line
+    ctx.beginPath();
+    history.forEach((p,i)=>{
+      const r = p.psi * scale;
+      const x = cx + Math.cos(p.angle)*r;
+      const y = cy + Math.sin(p.angle)*r;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle = 'rgba(233,213,255,0.95)';
+    ctx.lineWidth = 1.2*dpr;
+    ctx.stroke();
+    ctx.restore();
+
+    // history dots fading
+    for(let i=0;i<history.length;i+=4){
+      const p = history[i];
+      const r = p.psi * scale;
+      const x = cx + Math.cos(p.angle)*r;
+      const y = cy + Math.sin(p.angle)*r;
+      const age = (history.length - i) / history.length;
+      ctx.beginPath();
+      ctx.arc(x,y,1.5*dpr,0,Math.PI*2);
+      ctx.fillStyle = `rgba(168,85,247,${0.1 + age*0.3})`;
+      ctx.fill();
+    }
+  }
+
+  // shadow bits flowing INWARD
+  bits.forEach((b)=>{
+    b.r *= b.speed * (0.98 + absorb*0.015);
+    b.angle += 0.018 + absorb*0.012;
+    
+    if(b.r < 18*dpr){
+      b.r = maxRadius * (0.98 + Math.random()*0.08);
+      b.angle = Math.random()*Math.PI*2;
+    }
+    if(b.r > maxRadius*1.2) b.r = maxRadius;
+
+    const x = cx + Math.cos(b.angle)*b.r;
+    const y = cy + Math.sin(b.angle)*b.r;
+    const t = 1 - (b.r / maxRadius);
+    
+    // inward trail
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    const tx = cx + Math.cos(b.angle)*b.r*0.88;
+    const ty = cy + Math.sin(b.angle)*b.r*0.88;
+    ctx.lineTo(tx,ty);
+    ctx.strokeStyle = `rgba(147,51,234,${0.15 + t*0.25})`;
+    ctx.lineWidth = 2*dpr;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // bit
+    ctx.beginPath();
+    ctx.arc(x,y,3.2*dpr,0,Math.PI*2);
+    ctx.fillStyle = `rgba(217,70,239,${0.4 + t*0.5})`;
+    ctx.shadowColor = '#c026d3';
+    ctx.shadowBlur = 14*dpr * (0.5 + t);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // inner core
+    ctx.beginPath();
+    ctx.arc(x,y,1.2*dpr,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fill();
+  });
+
+  // quantum dots - TWO with 4 corners each, ABSORBING
+  ctx.save();
+  ctx.translate(cx,cy);
+  const pulse = 1 + Math.sin(Date.now()*0.003)*0.08;
+  const dotGlow = 18*dpr + absorb*35*dpr;
+  
+  // connection
+  ctx.beginPath();
+  ctx.moveTo(-16*dpr,0);
+  ctx.lineTo(16*dpr,0);
+  ctx.strokeStyle = `rgba(217,70,239,${0.15 + absorb*0.25})`;
+  ctx.lineWidth = 1*dpr;
+  ctx.setLineDash([3*dpr,5*dpr]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  [-1,1].forEach((side, idx)=>{
+    ctx.save();
+    ctx.translate(side*15*dpr, 0);
+    ctx.rotate((Date.now()*0.0004 + idx*Math.PI) * (idx?1:-1) * pulse);
+    
+    const s = 13*dpr * pulse;
+    // outer glow
+    ctx.shadowColor = idx===0 ? '#d946ef' : '#8b5cf6';
+    ctx.shadowBlur = dotGlow;
+    ctx.fillStyle = idx===0 ? 'rgba(192,38,211,0.95)' : 'rgba(109,40,217,0.95)';
+    ctx.beginPath();
+    const r = s/2;
+    // square with 4 corners (diamond)
+    ctx.moveTo(0,-r);
+    ctx.lineTo(r,0);
+    ctx.lineTo(0,r);
+    ctx.lineTo(-r,0);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    // core
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(0,0,2.2*dpr,0,Math.PI*2);
+    ctx.fill();
+    
+    // 4 corners highlight
+    ctx.fillStyle = 'rgba(250,232,255,0.9)';
+    [[0,-r],[r,0],[0,r],[-r,0]].forEach(([px,py])=>{
+      ctx.beginPath();
+      ctx.arc(px,py,1.6*dpr,0,Math.PI*2);
+      ctx.fill();
+    });
+    
+    ctx.restore();
+  });
+  ctx.restore();
+
+  // current head
+  if(history.length){
+    const p = history[history.length-1];
+    const r = p.psi * scale;
+    const x = cx + Math.cos(p.angle)*r;
+    const y = cy + Math.sin(p.angle)*r;
+    
+    // absorption beam to center
+    if(r > 20*dpr){
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(cx,cy);
+      ctx.strokeStyle = `rgba(168,85,247,${0.12 + absorb*0.18})`;
+      ctx.lineWidth = 1*dpr;
+      ctx.setLineDash([4*dpr,8*dpr]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // head glow
+    ctx.beginPath();
+    ctx.arc(x,y,6*dpr,0,Math.PI*2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#e879f9';
+    ctx.shadowBlur = 24*dpr;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    ctx.beginPath();
+    ctx.arc(x,y,11*dpr,0,Math.PI*2);
+    ctx.strokeStyle = 'rgba(232,121,249,0.35)';
+    ctx.lineWidth = 1.5*dpr;
+    ctx.stroke();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+reset();
+draw();
+
+// keyboard
+window.addEventListener('keydown', (e)=>{
+  if(e.code==='Space'){ e.preventDefault(); toggleAuto(); }
+  if(e.key==='ArrowRight' || e.key==='s'){ doStep(); }
+  if(e.key==='r' || e.key==='R'){ reset(); }
+});
+</script>
+</body>
+</html>
